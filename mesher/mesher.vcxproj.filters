@@ -27,6 +27,9 @@
     <ClCompile Include="example_read.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="opencascade_simplifier.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="neighbor_search.hpp">

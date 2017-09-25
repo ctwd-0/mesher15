@@ -61,13 +61,14 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>E:\20170109\mesher15\mesher\openmesh\include;E:\20170109\mesher\mesher\opennurbs\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\inc;C:\dev\boost_1_59_0;C:\dev\CGAL-4.9\include;E:\20170109\mesher15\mesher\openmesh\include;E:\20170109\mesher\mesher\opennurbs\include;$(IncludePath)</IncludePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
+    <LibraryPath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\win64\vc14\lib;C:\dev\CGAL-4.9\build\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ReferencePath>$(ReferencePath)</ReferencePath>
-    <IncludePath>C:\dev\boost_1_59_0;C:\dev\CGAL-4.9\include;E:\20170109\mesher15\mesher\openmesh\include;E:\20170109\mesher\mesher\opennurbs\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\dev\CGAL-4.9\build\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\inc;C:\dev\boost_1_59_0;C:\dev\CGAL-4.9\include;E:\20170109\mesher15\mesher\openmesh\include;E:\20170109\mesher\mesher\opennurbs\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\win64\vc14\lib;C:\dev\CGAL-4.9\build\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,6 +114,7 @@
     <ClCompile Include="cgal_simplifier.cpp" />
     <ClCompile Include="example_read.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="opencascade_simplifier.cpp" />
     <ClCompile Include="openmesh_simplifier.cpp" />
   </ItemGroup>
   <ItemGroup>
