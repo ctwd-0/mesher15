@@ -414,20 +414,33 @@ TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 	//这里遇到个问题。一定要先加外环。
 	//如果直接遍历环往上加，会出现面裁剪出问题的情况。
 	auto occt_surface = convert_opennurbs_surface_to_occt_surface(face.NurbsSurface());
-	auto outer_loop = face.OuterLoop();
-	auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop);
 
-	TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_outer_wire);
+	if (face.OuterLoop()) {
+		auto outer_loop = face.OuterLoop();
+		auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop);
 
-	for (int i = 0; i < face.LoopCount(); i++) {
-		if (face.Loop(i) == outer_loop) {
-			continue;
+		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_outer_wire);
+
+		for (int i = 0; i < face.LoopCount(); i++) {
+			if (face.Loop(i) == outer_loop) {
+				continue;
+			}
+			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
+			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
 		}
-		auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
-		occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
-	}
 
-	return occt_face;
+		return occt_face;
+	}
+	else {
+
+		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
+		for (int i = 0; i < face.LoopCount(); i++) {
+			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
+			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
+		}
+
+		return occt_face;
+	}
 }
 
 TopoDS_Compound convert_opennurbs_solid_to_occt_solid(const ON_Brep* brep) {
@@ -448,7 +461,7 @@ int main() {
 	ON::Begin();
 
 	ONX_Model model;
-	FILE* archive_fp = ON::OpenFile("small7.3dm", "rb");
+	FILE* archive_fp = ON::OpenFile("full.3dm", "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model.Read(archive);
 	if (rc) {
@@ -481,5 +494,5 @@ int main() {
 		}
 	}
 
-	BRepTools::Write(occt_compound_all,"small7.brep");
+	BRepTools::Write(occt_compound_all,"full.release.brep");
 }
