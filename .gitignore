@@ -248,3 +248,4 @@ ModelManifest.xml
 *.3dmbak
 *.brep
 *.rhl
+/mesher/small12.brep.aa

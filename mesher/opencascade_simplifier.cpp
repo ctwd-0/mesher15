@@ -40,6 +40,24 @@
 
 #include <BRep_Builder.hxx>
 
+#include <gp_Pnt.hxx> 
+#include <BRepMesh.hxx>
+#include <BRep_Tool.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <BRepMesh_FastDiscret.hxx>
+#include <BRepMesh_FastDiscretFace.hxx>
+#include <TopExp_Explorer.hxx>
+#include <Poly_Triangulation.hxx>
+
+#include <BRepProj_Projection.hxx>
+
+#include <BRepBndLib.hxx>
+
+#include <ProjLib.hxx>
+
+#include <ProjLib_CompProjectedCurve.hxx>
+
+
 ////#pragma comment(lib, "TKBin.lib")
 ////#pragma comment(lib, "TKBinL.lib")
 ////#pragma comment(lib, "TKBinTObj.lib")
@@ -107,7 +125,9 @@
 #pragma comment(lib, "TKMath.lib")
 #pragma comment(lib, "TKTopAlgo.lib")
 
+#pragma comment(lib, "TKMesh.lib") 
 
+using namespace std;
 
 ///**
 //* @breif Convert OpenNURBS NURBS curve to OpenCASCADE Geom_BSplineCurve.
@@ -354,8 +374,9 @@ Handle_Geom_BSplineSurface convert_opennurbs_surface_to_occt_surface(const ON_Nu
 	return occt_surface;
 }
 
-TopoDS_Edge convert_opennurbs_edge_to_occt_edge(ON_BrepEdge* edge) {
-	BRep_Builder occt_brep_builder;
+TopoDS_Edge convert_opennurbs_edge_to_occt_edge(ON_BrepEdge* edge, bool reverse) {
+	BRep_Builder brep_builder;
+	
 	auto occt_curve = convert_opennurbs_curve_to_occt_curve(edge->NurbsCurve());
 
 	TopoDS_Edge occt_edge = BRepBuilderAPI_MakeEdge(occt_curve);
@@ -363,21 +384,61 @@ TopoDS_Edge convert_opennurbs_edge_to_occt_edge(ON_BrepEdge* edge) {
 	auto p0 = edge->Vertex(0)->Point();
 	auto p1 = edge->Vertex(1)->Point();
 
+
+
+	//cout << edge->ProxyCurveIsReversed() << endl;
+
+	//马勒戈壁的。
+	//loop中边的顺序可能会有反的。
+	//而且看起来一定会有。
+	//原因是在trim层，可能把3d curve反转。
+	//问题仍然没有解决。
+
 	TopoDS_Vertex occt_v0 = BRepBuilderAPI_MakeVertex(gp_Pnt(p0.x, p0.y, p0.z));
 	TopoDS_Vertex occt_v1 = BRepBuilderAPI_MakeVertex(gp_Pnt(p1.x, p1.y, p1.z));
-	occt_brep_builder.Add(occt_edge, occt_v0);
-	occt_brep_builder.Add(occt_edge, occt_v1);
+	brep_builder.Add(occt_edge, occt_v0);
+	brep_builder.Add(occt_edge, occt_v1);
 
+	//cout << p0.x+300 << " " << p0.y+2200 << " " << 0 << endl;
+	//cout << p1.x+300 << " " << p1.y+2200 << " " << 0 << endl;
+	//cout<<endl;
+
+
+	if (reverse) {
+		occt_edge.Reverse();
+	}
+
+	
 	return occt_edge;
 }
 
 TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim) {
+	BRep_Builder occt_brep_builder;
+
+	auto brep = trim->Brep();
 	auto edge = trim->Edge();
+	//if (trim->m_c2i != -1) {
+	//	auto curve_2d = brep->m_C2[trim->m_c2i];
+	//	ON_NurbsCurve nurbs_curve;
+	//	auto ret = curve_2d->GetNurbForm(nurbs_curve);
+	//	cout << ret << endl;
+	//	return TopoDS_Edge();
+	//}
+	//else {
+	//	cout << "err" << endl;
+	//	return TopoDS_Edge();
+	//}
 	if (edge != nullptr) {
-		return convert_opennurbs_edge_to_occt_edge(edge);
+		auto occt_edge = convert_opennurbs_edge_to_occt_edge(edge, trim->m_bRev3d);
+		//cout << trim->m_c2i << endl;
+		if (trim->m_c2i == -1) {
+			cout<<"no 2d curve"<<endl;
+			//auto curve_2d = brep->m_C2[trim->m_c2i];
+		}
+		return occt_edge;
 	}
 	else {
-		cout << "trim type:"<< trim->m_type <<endl;
+		cout << "trim type:" << trim->m_type << endl;
 		return TopoDS_Edge();
 	}
 }
@@ -401,7 +462,10 @@ TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop) {
 			//occt_brep_builder.Add(occt_wire, occt_edge);
 		}
 		else {
-			cout << "trim type:" << loop->Trim(i)->m_type << endl;
+			//这里 trim 的类型没有详细的研究。
+			//当前忽略singular的trim。
+			//如果之后有时间的话，应该详细研究下保证不出问题。
+			//cout << "trim type:" << loop->Trim(i)->m_type << endl;
 		}
 	}
 
@@ -415,28 +479,37 @@ TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 	//如果直接遍历环往上加，会出现面裁剪出问题的情况。
 	auto occt_surface = convert_opennurbs_surface_to_occt_surface(face.NurbsSurface());
 
+
 	if (face.OuterLoop()) {
 		auto outer_loop = face.OuterLoop();
 		auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop);
 
-		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_outer_wire);
+		auto make_face = BRepBuilderAPI_MakeFace(/*occt_surface, */occt_outer_wire);
+		auto occt_face = make_face.Face();
+
+		//cout << make_face.IsDone() << endl;
+		//cout << make_face.Error() << endl;
+
+		//TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
+		//occt_brep_builder.Add(occt_face, occt_outer_wire);
+
 
 		for (int i = 0; i < face.LoopCount(); i++) {
-			if (face.Loop(i) == outer_loop) {
+			if (face.Loop(i)->m_type == ON_BrepLoop::outer) {
+				//cout<<"outer"<<endl;
 				continue;
 			}
 			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
-			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
+			occt_brep_builder.Add(occt_face, occt_wire);
 		}
 
 		return occt_face;
 	}
 	else {
-
 		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
 		for (int i = 0; i < face.LoopCount(); i++) {
 			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
-			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
+			occt_brep_builder.Add(occt_face, occt_wire);
 		}
 
 		return occt_face;
@@ -457,11 +530,50 @@ TopoDS_Compound convert_opennurbs_solid_to_occt_solid(const ON_Brep* brep) {
 	return occt_compound;
 }
 
+void write_obj(vector<gp_Pnt>& vertices, vector<vector<int>>& faces, const char* file_name) {
+	FILE* f;
+	auto error = fopen_s(&f, file_name, "wb");
+
+	char line[1000] = { 0 };
+
+	for (int i = 0; i < vertices.size(); i++) {
+		sprintf(line, "v %lf %lf %lf\n\0", vertices[i].XYZ().X(), vertices[i].XYZ().Y(), vertices[i].XYZ().Z());
+		fwrite(line, strlen(line), 1, f);
+	}
+
+	for (int i = 0; i < faces.size(); i++) {
+		sprintf(line, "f %d %d %d\n\0", faces[i][0] + 1, faces[i][1] + 1, faces[i][2] + 1);
+		fwrite(line, strlen(line), 1, f);
+	}
+
+	fclose(f);
+}
+
+void append_mesh(vector<gp_Pnt>& vs, vector<vector<int>>& ts, const opencascade::handle<Poly_Triangulation> triangulation) {
+	auto n_triangles = triangulation->NbTriangles();
+	auto n_nodes = triangulation->NbNodes();
+	auto triangles = triangulation->Triangles();
+	auto nodes = triangulation->Nodes();
+
+	Standard_Integer i1, i2, i3;
+
+	int offset = vs.size();
+	for (auto i = 1; i <= n_triangles; i++) {
+		auto triangle = triangles.Value(i);
+		triangle.Get(i1, i2, i3);
+		ts.push_back(vector<int>{i1 + offset - 1, i2 + offset - 1, i3 + offset - 1});
+	}
+
+	for (auto i = 1; i <= n_nodes; i++) {
+		vs.push_back(nodes.Value(i));
+	}
+}
+
 int main() {
 	ON::Begin();
 
 	ONX_Model model;
-	FILE* archive_fp = ON::OpenFile("full.3dm", "rb");
+	FILE* archive_fp = ON::OpenFile("small12.3dm", "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model.Read(archive);
 	if (rc) {
@@ -469,6 +581,7 @@ int main() {
 	}
 	else {
 		cout << "failed" << endl;
+		system("pause");
 		return -1;
 	}
 	ON::CloseFile(archive_fp);
@@ -484,15 +597,53 @@ int main() {
 		if (brep != nullptr) {
 
 			//if (brep->IsSolid()) {
-				auto occt_compound = convert_opennurbs_solid_to_occt_solid(brep);
-
+			auto occt_compound = convert_opennurbs_solid_to_occt_solid(brep);
 			//}
 			//else {
 			//	cout << "none solid." <<endl;
 			//}
-				occt_brep_builder.Add(occt_compound_all, occt_compound);
+			occt_brep_builder.Add(occt_compound_all, occt_compound);
 		}
 	}
 
-	BRepTools::Write(occt_compound_all,"full.release.brep");
+	cout << "convert done" << endl;
+
+	BRepTools::Write(occt_compound_all, "small12.brep");
+
+	Bnd_Box b;
+
+	BRepBndLib::Add(occt_compound_all, b);
+	//B.Get(Xmin, Ymin, Zmin, Xmax, Ymax, Zmax);
+
+	BRepMesh_FastDiscret::Parameters p;
+	auto occt_discret = BRepMesh_FastDiscret(b, p);
+	occt_discret.Perform(occt_compound_all);
+
+	auto occt_mesh = BRepMesh_IncrementalMesh(occt_compound_all, 1);
+
+	if (occt_mesh.IsDone()) {
+		cout << "mesh done" << endl;
+	}
+
+	vector<gp_Pnt> vs;
+	vector<vector<int>> fs;
+
+	for (TopExp_Explorer face_exp(occt_compound_all, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
+		TopLoc_Location location;
+		auto &face = TopoDS::Face(face_exp.Current());
+
+		auto triangulation = BRep_Tool::Triangulation(face, location);
+
+		if (!triangulation.IsNull()) {
+			append_mesh(vs, fs, triangulation);
+		}
+		else {
+
+		}
+	}
+	
+	write_obj(vs, fs, "small12.obj");
+
+
+	system("pause");
 }
