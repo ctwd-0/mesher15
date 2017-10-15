@@ -412,29 +412,64 @@ TopoDS_Edge convert_opennurbs_edge_to_occt_edge(ON_BrepEdge* edge, bool reverse)
 	return occt_edge;
 }
 
+static int curve_proxy_c = 0;
+static int on_surface_c = 0;
+static int line_c = 0;
+static int arc_c = 0;
+static int polyline_c = 0;
+static int polycurve_c = 0;
+static int nurbs_c = 0;
+
+int opennurbs_curve2d_tester(ON_Curve* curve_2d) {
+
+	auto curve_proxy = dynamic_cast<ON_CurveProxy*>(curve_2d); //checked
+	auto curve_on_surface = dynamic_cast<ON_CurveOnSurface*>(curve_2d); //checked
+	auto line = dynamic_cast<ON_LineCurve*>(curve_2d); //checked
+	auto arc = dynamic_cast<ON_ArcCurve*>(curve_2d); //checked
+	auto polyline = dynamic_cast<ON_PolylineCurve*>(curve_2d); //checked
+	auto polycurve = dynamic_cast<ON_PolyCurve*>(curve_2d); //checked
+	auto nurbs = dynamic_cast<ON_NurbsCurve*>(curve_2d); //checked
+
+	if (curve_proxy != nullptr) {
+		curve_proxy_c++;
+	}
+	if (curve_on_surface != nullptr) {
+		on_surface_c++;
+	}
+	if (line != nullptr) {
+		line_c++;
+	}
+	if (arc != nullptr) {
+		arc_c++;
+	}
+	if (polyline != nullptr) {
+		polyline_c++;
+	}
+	if (polycurve != nullptr) {
+		polycurve_c++;
+	}
+	if (nurbs != nullptr) {
+		nurbs_c++;
+	}
+	return 0;
+}
+
 TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim) {
 	BRep_Builder occt_brep_builder;
 
 	auto brep = trim->Brep();
 	auto edge = trim->Edge();
-	//if (trim->m_c2i != -1) {
-	//	auto curve_2d = brep->m_C2[trim->m_c2i];
-	//	ON_NurbsCurve nurbs_curve;
-	//	auto ret = curve_2d->GetNurbForm(nurbs_curve);
-	//	cout << ret << endl;
-	//	return TopoDS_Edge();
-	//}
-	//else {
-	//	cout << "err" << endl;
-	//	return TopoDS_Edge();
-	//}
+	if (trim->m_c2i != -1) {
+		auto curve_2d = brep->m_C2[trim->m_c2i];
+		opennurbs_curve2d_tester(curve_2d);
+	}
+	else {
+		cout <<"no 2d curve"<<endl;
+	}
+
+
 	if (edge != nullptr) {
 		auto occt_edge = convert_opennurbs_edge_to_occt_edge(edge, trim->m_bRev3d);
-		//cout << trim->m_c2i << endl;
-		if (trim->m_c2i == -1) {
-			cout<<"no 2d curve"<<endl;
-			//auto curve_2d = brep->m_C2[trim->m_c2i];
-		}
 		return occt_edge;
 	}
 	else {
@@ -479,37 +514,28 @@ TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 	//如果直接遍历环往上加，会出现面裁剪出问题的情况。
 	auto occt_surface = convert_opennurbs_surface_to_occt_surface(face.NurbsSurface());
 
-
 	if (face.OuterLoop()) {
 		auto outer_loop = face.OuterLoop();
 		auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop);
 
-		auto make_face = BRepBuilderAPI_MakeFace(/*occt_surface, */occt_outer_wire);
-		auto occt_face = make_face.Face();
-
-		//cout << make_face.IsDone() << endl;
-		//cout << make_face.Error() << endl;
-
-		//TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
-		//occt_brep_builder.Add(occt_face, occt_outer_wire);
-
+		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_outer_wire);
 
 		for (int i = 0; i < face.LoopCount(); i++) {
-			if (face.Loop(i)->m_type == ON_BrepLoop::outer) {
-				//cout<<"outer"<<endl;
+			if (face.Loop(i) == outer_loop) {
 				continue;
 			}
 			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
-			occt_brep_builder.Add(occt_face, occt_wire);
+			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
 		}
 
 		return occt_face;
 	}
 	else {
+
 		TopoDS_Face occt_face = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
 		for (int i = 0; i < face.LoopCount(); i++) {
 			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i));
-			occt_brep_builder.Add(occt_face, occt_wire);
+			occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
 		}
 
 		return occt_face;
@@ -573,7 +599,7 @@ int main() {
 	ON::Begin();
 
 	ONX_Model model;
-	FILE* archive_fp = ON::OpenFile("small12.3dm", "rb");
+	FILE* archive_fp = ON::OpenFile("full.3dm", "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model.Read(archive);
 	if (rc) {
@@ -608,7 +634,21 @@ int main() {
 
 	cout << "convert done" << endl;
 
-	BRepTools::Write(occt_compound_all, "small12.brep");
+	ON::End();
+
+
+	cout << "curve_proxy: " << curve_proxy_c << endl;
+	cout << "on_surface: " << on_surface_c << endl;
+	cout << "line: " << line_c << endl;
+	cout << "arc: " << arc_c << endl;
+	cout << "polyline: " << polyline_c << endl;
+	cout << "polycurve: " << polycurve_c << endl;
+	cout << "nurbs: " << nurbs_c << endl;
+	
+	BRepTools::Write(occt_compound_all, "full.brep");
+	
+	system("pause");
+	return -2;
 
 	Bnd_Box b;
 
@@ -642,8 +682,8 @@ int main() {
 		}
 	}
 	
-	write_obj(vs, fs, "small12.obj");
+	write_obj(vs, fs, "full.obj");
 
-
+	ON::End();
 	system("pause");
 }
