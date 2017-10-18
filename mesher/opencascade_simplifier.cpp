@@ -597,19 +597,21 @@ TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim, Handle_Geom_B
 TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, Handle_Geom_BSplineSurface& occt_surface) {
 	BRep_Builder occt_brep_builder;
 
-	TopoDS_Wire occt_wire;
+	BRepBuilderAPI_MakeWire occt_wire;
 	bool wire_init = false;
 
 	for (int i = 0; i < loop->TrimCount(); i++) {
 		if (loop->Trim(i)->Edge() != nullptr) {
 			auto occt_edge = convert_opennurbs_trim_to_occt_edge(loop->Trim(i), occt_surface);
-			if (wire_init) {
-				occt_brep_builder.Add(occt_wire, occt_edge);
-			}
-			else {
-				occt_wire = BRepBuilderAPI_MakeWire(occt_edge);
-				wire_init = true;
-			}
+			//if (wire_init) {
+			//	occt_wire.Add(occt_edge);
+			//}
+			//else {
+			//	occt_wire = BRepBuilderAPI_MakeWire(occt_edge);
+			//	wire_init = true;
+			//}
+			occt_wire.Add(occt_edge);
+			//cout << occt_wire.IsDone() << endl;
 			//occt_brep_builder.Add(occt_wire, occt_edge);
 		}
 		else {
