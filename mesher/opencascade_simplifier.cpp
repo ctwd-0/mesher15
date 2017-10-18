@@ -42,6 +42,8 @@
 
 #include <BRep_Builder.hxx>
 
+#include<BRepLib.hxx>
+
 #include <gp_Pnt.hxx> 
 #include <BRepMesh.hxx>
 #include <BRep_Tool.hxx>
@@ -504,57 +506,32 @@ Handle_Geom_BSplineSurface convert_opennurbs_surface_to_occt_surface(const ON_Nu
 //	return 0;
 //}
 
-TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim, TopoDS_Face occt_face) {
+TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim, Handle_Geom_BSplineSurface& occt_surface) {
 	BRep_Builder brep_builder;
 
 	auto brep = trim->Brep();
 	auto edge = trim->Edge();
 
-	auto interval = trim->Domain();
+
+
 	if (trim->m_c2i != -1) {
+
+		auto interval = trim->Domain();
 		auto curve_2d = brep->m_C2[trim->m_c2i];
 		auto nurbs = dynamic_cast<ON_NurbsCurve*>(curve_2d); //checked
 		if (nurbs == nullptr) {
 			nurbs = curve_2d->NurbsCurve();
 		}
-
+		
 		auto occt_bspline_2d = convert_opennurbs_2d_curve_to_occt_2d_curve(nurbs);
 		
-		auto p0 = trim->Vertex(0)->Point();
-		auto p1 = trim->Vertex(1)->Point();
-
-		gp_Pnt occt_p0(p0.x, p0.y, p0.z);
-		gp_Pnt occt_p1(p1.x, p1.y, p1.z);
-
-		TopoDS_Vertex occt_v0, occt_v1;
-
-		brep_builder.MakeVertex(occt_v0, occt_p0, Precision::Confusion());
-		brep_builder.MakeVertex(occt_v1, occt_p0, Precision::Confusion());
-
 		TopoDS_Edge occt_edge;
 
-		if (edge != nullptr) {
-			auto occt_bspline = convert_opennurbs_curve_to_occt_curve(edge->NurbsCurve());
-			brep_builder.MakeEdge(occt_edge, occt_bspline, Precision::Confusion());
-		}
-		else {
-			brep_builder.MakeEdge(occt_edge);
-		}
+		occt_edge = BRepBuilderAPI_MakeEdge(occt_bspline_2d, occt_surface, interval.Min(), interval.Max());
 
-		brep_builder.UpdateEdge(occt_edge, occt_bspline_2d, occt_face, Precision::Confusion());
-		brep_builder.Add(occt_edge, occt_v0);
-		brep_builder.Add(occt_edge, occt_v1);
-		
-		brep_builder.Range(occt_edge, interval.Min(), interval.Max());
-
-		//cout<<endl;
-		//cout<< trim->m_bRev3d <<endl;
-		//cout<< interval.Min()  << " "<< interval.Max() <<endl;
-		
-		if (trim->m_bRev3d) {
-			occt_edge.Reverse();
-			brep_builder.Range(occt_edge, -interval.Max(), -interval.Min(), true);
-		}
+		//if (trim->m_bRev3d) {
+		//	occt_edge.Reverse();
+		//}
 
 		return occt_edge;
 	}
@@ -562,9 +539,62 @@ TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim, TopoDS_Face o
 		cout <<"no 2d curve"<<endl;
 		return TopoDS_Edge();
 	}
+
+
+	//if (trim->m_c2i != -1) {
+	//	auto curve_2d = brep->m_C2[trim->m_c2i];
+	//	auto nurbs = dynamic_cast<ON_NurbsCurve*>(curve_2d); //checked
+	//	if (nurbs == nullptr) {
+	//		nurbs = curve_2d->NurbsCurve();
+	//	}
+
+	//	auto occt_bspline_2d = convert_opennurbs_2d_curve_to_occt_2d_curve(nurbs);
+	//	
+	//	auto p0 = trim->Vertex(0)->Point();
+	//	auto p1 = trim->Vertex(1)->Point();
+
+	//	gp_Pnt occt_p0(p0.x, p0.y, p0.z);
+	//	gp_Pnt occt_p1(p1.x, p1.y, p1.z);
+
+	//	TopoDS_Vertex occt_v0, occt_v1;
+
+	//	brep_builder.MakeVertex(occt_v0, occt_p0, Precision::Confusion());
+	//	brep_builder.MakeVertex(occt_v1, occt_p0, Precision::Confusion());
+
+	//	TopoDS_Edge occt_edge;
+
+	//	if (edge != nullptr) {
+	//		auto occt_bspline = convert_opennurbs_curve_to_occt_curve(edge->NurbsCurve());
+	//		brep_builder.MakeEdge(occt_edge, occt_bspline, Precision::Confusion());
+	//	}
+	//	else {
+	//		brep_builder.MakeEdge(occt_edge);
+	//	}
+
+	//	brep_builder.UpdateEdge(occt_edge, occt_bspline_2d, occt_face, Precision::Confusion());
+	//	brep_builder.Add(occt_edge, occt_v0);
+	//	brep_builder.Add(occt_edge, occt_v1);
+	//	
+	//	brep_builder.Range(occt_edge, interval.Min(), interval.Max());
+
+	//	//cout<<endl;
+	//	//cout<< trim->m_bRev3d <<endl;
+	//	//cout<< interval.Min()  << " "<< interval.Max() <<endl;
+	//	
+	//	if (trim->m_bRev3d) {
+	//		occt_edge.Reverse();
+	//		brep_builder.Range(occt_edge, -interval.Max(), -interval.Min(), true);
+	//	}
+
+	//	return occt_edge;
+	//}
+	//else {
+	//	cout <<"no 2d curve"<<endl;
+	//	return TopoDS_Edge();
+	//}
 }
 
-TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, TopoDS_Face& occt_face) {
+TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, Handle_Geom_BSplineSurface& occt_surface) {
 	BRep_Builder occt_brep_builder;
 
 	TopoDS_Wire occt_wire;
@@ -572,7 +602,7 @@ TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, TopoDS_
 
 	for (int i = 0; i < loop->TrimCount(); i++) {
 		if (loop->Trim(i)->Edge() != nullptr) {
-			auto occt_edge = convert_opennurbs_trim_to_occt_edge(loop->Trim(i), occt_face);
+			auto occt_edge = convert_opennurbs_trim_to_occt_edge(loop->Trim(i), occt_surface);
 			if (wire_init) {
 				occt_brep_builder.Add(occt_wire, occt_edge);
 			}
@@ -604,7 +634,7 @@ TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 
 	if (face.OuterLoop()) {
 		auto outer_loop = face.OuterLoop();
-		auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop,occt_face);
+		auto occt_outer_wire = convert_opennurbs_loop_to_occt_wire(outer_loop, occt_surface);
 
 		brep_builder.Add(occt_face, occt_outer_wire);
 
@@ -612,22 +642,21 @@ TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 			if (face.Loop(i) == outer_loop) {
 				continue;
 			}
-			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i), occt_face);
+			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i), occt_surface);
 			//occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
 			brep_builder.Add(occt_face, occt_wire);
 		}
-
-		return occt_face;
 	}
 	else {
 		for (int i = 0; i < face.LoopCount(); i++) {
-			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i) , occt_face);
+			auto occt_wire = convert_opennurbs_loop_to_occt_wire(face.Loop(i) , occt_surface);
 			//occt_face = BRepBuilderAPI_MakeFace(occt_surface, occt_wire);
 			brep_builder.Add(occt_face, occt_wire);
 		}
-
-		return occt_face;
 	}
+
+	BRepLib::BuildCurves3d(occt_face);
+	return occt_face;
 }
 
 TopoDS_Compound convert_opennurbs_solid_to_occt_solid(const ON_Brep* brep) {
@@ -687,7 +716,7 @@ int main() {
 	ON::Begin();
 
 	ONX_Model model;
-	FILE* archive_fp = ON::OpenFile("small6.3dm", "rb");
+	FILE* archive_fp = ON::OpenFile("small12.3dm", "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model.Read(archive);
 	if (rc) {
@@ -738,7 +767,7 @@ int main() {
 	//cout << "polycurve: " << polycurve_c << endl;
 	//cout << "nurbs: " << nurbs_c << endl;
 	
-	BRepTools::Write(occt_compound_all, "small6.brep");
+	BRepTools::Write(occt_compound_all, "small12.brep");
 	
 	//system("pause");
 	//return -2;
@@ -775,7 +804,7 @@ int main() {
 		}
 	}
 	
-	write_obj(vs, fs, "small6.obj");
+	write_obj(vs, fs, "small12.obj");
 
 	ON::End();
 	system("pause");
