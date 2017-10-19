@@ -15,18 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cgal_simplifier.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="openmesh_simplifier.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="example_read.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="opencascade_simplifier.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -44,9 +32,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="neighbor_search.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="folder.h">
       <Filter>头文件</Filter>
     </ClInclude>

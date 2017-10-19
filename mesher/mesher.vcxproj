@@ -113,19 +113,14 @@
   <ItemGroup>
     <ClCompile Include="brep_conversion.cpp" />
     <ClCompile Include="bspline_conversion.cpp" />
-    <ClCompile Include="cgal_simplifier.cpp" />
-    <ClCompile Include="example_read.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="obj_model_output.cpp" />
     <ClCompile Include="opennurbs_utils.cpp" />
     <ClCompile Include="opencascade_simplifier.cpp" />
-    <ClCompile Include="openmesh_simplifier.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="brep_conversion.h" />
     <ClInclude Include="bspline_conversion.h" />
     <ClInclude Include="folder.h" />
-    <ClInclude Include="neighbor_search.hpp" />
     <ClInclude Include="obj_model_output.h" />
     <ClInclude Include="opennurbs_utils.h" />
   </ItemGroup>
