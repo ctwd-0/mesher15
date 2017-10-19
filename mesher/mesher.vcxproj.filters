@@ -30,12 +30,36 @@
     <ClCompile Include="opencascade_simplifier.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="brep_conversion.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="bspline_conversion.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="obj_model_output.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="opennurbs_utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="neighbor_search.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="folder.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="opennurbs_utils.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="obj_model_output.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bspline_conversion.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="brep_conversion.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
