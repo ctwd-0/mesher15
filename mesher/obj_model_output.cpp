@@ -39,3 +39,53 @@ void append_mesh(vector<gp_Pnt>& vs, vector<vector<int>>& ts, const opencascade:
 		vs.push_back(nodes.Value(i));
 	}
 }
+
+void merge_vertices(vector<gp_Pnt>& vertices, vector<vector<int>>& faces, double eps) {
+	eps *= eps;
+	map<int, int> duplicates;
+	vector<int> used_id;
+	map<int, int> used_id_new;
+
+	for (int i = 0; i < vertices.size(); i++) {
+		gp_Pnt point = vertices[i];
+		if (used_id.size() == 0) {
+			used_id.push_back(i);
+			used_id_new[i] = used_id_new.size();
+		}
+		else {
+			bool is_new = true;
+			int dup = -1;
+			for (int j = 0; j < used_id.size(); j++) {
+				double square_distance = point.SquareDistance(vertices[used_id[j]]);
+				if (square_distance < eps) {
+					is_new = false;
+					dup = used_id[j];
+					break;
+				}
+			}
+			if (is_new) {
+				used_id.push_back(i);
+				used_id_new[i] = used_id_new.size();
+			}
+			else {
+				duplicates[i] = dup;
+			}
+		}
+	}
+
+	for (int i = 0; i < faces.size(); i++) {
+		for (int j = 0; j < faces[i].size(); j++) {
+			int old_id = faces[i][j];
+			if (duplicates.count(old_id)) {
+				old_id = duplicates[old_id];
+			}
+			faces[i][j] = used_id_new[old_id];
+		}
+	}
+	for (int i = 0; i < used_id.size(); i++) {
+		vertices[used_id_new[used_id[i]]] = vertices[used_id[i]];
+	}
+	while (vertices.size() > used_id.size()) {
+		vertices.pop_back();
+	}
+}
