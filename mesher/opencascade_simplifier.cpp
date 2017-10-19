@@ -714,11 +714,62 @@ void append_mesh(vector<gp_Pnt>& vs, vector<vector<int>>& ts, const opencascade:
 	}
 }
 
+
+static bool IsLayerVisible(const ON_ObjectArray<ON_Layer>& layer_table, int layer_index)
+{
+	bool rc = false;
+	// Validate the layer index
+	if (layer_index >= 0 && layer_index < layer_table.Count())
+	{
+		// Get the layer
+		const ON_Layer& layer = layer_table[layer_index];
+		// Get the layer's visibility
+		rc = layer.IsVisible();
+		// If the layer is visible, see if the layer has a parent. If so,
+		// check to see if the layer's parent is visible. If not, then
+		// the layer is also not visible.
+		if (rc && ON_UuidIsNotNil(layer.m_parent_layer_id))
+		{
+			int i, layer_count = layer_table.Count();
+			for (i = 0; i < layer_count; i++)
+			{
+				if (0 == ON_UuidCompare(layer.m_parent_layer_id, layer_table[i].m_layer_id))
+					return IsLayerVisible(layer_table, i); // recursive
+			}
+		}
+	}
+	return rc;
+}
+
+static bool IsModelObjectVisible(const ONX_Model& model, const ONX_Model_Object& model_object)
+{
+	bool rc = false;
+	switch (model_object.m_attributes.Mode())
+	{
+	case ON::normal_object:
+	case ON::idef_object:
+	case ON::locked_object:
+	{
+		// Get the object's layer
+		int layer_index = model_object.m_attributes.m_layer_index;
+		// See if the layer is visible
+		rc = IsLayerVisible(model.m_layer_table, layer_index);
+	}
+	break;
+	}
+	return rc;
+}
+
 int main() {
+
+	string case_name;
+
+	case_name = "full";
+
 	ON::Begin();
 
 	ONX_Model model;
-	FILE* archive_fp = ON::OpenFile("small12.3dm", "rb");
+	FILE* archive_fp = ON::OpenFile((case_name + ".3dm").c_str(), "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model.Read(archive);
 	if (rc) {
@@ -743,6 +794,9 @@ int main() {
 	for (int obj_id = 0; obj_id < model.m_object_table.Count(); obj_id++) {
 		ONX_Model_Object object = model.m_object_table[obj_id];
 
+		if (!IsModelObjectVisible(model, object)) {
+			continue;
+		}
 		const ON_Brep* brep = ON_Brep::Cast(object.m_object);
 		if (brep != nullptr) {
 
@@ -769,44 +823,44 @@ int main() {
 	//cout << "polycurve: " << polycurve_c << endl;
 	//cout << "nurbs: " << nurbs_c << endl;
 	
-	BRepTools::Write(occt_compound_all, "small12.brep");
+	BRepTools::Write(occt_compound_all, (case_name + ".brep").c_str());
 	
-	//system("pause");
-	//return -2;
 
 	Bnd_Box b;
 
-	BRepBndLib::Add(occt_compound_all, b);
+	//BRepBndLib::Add(occt_compound_all, b);
 	//B.Get(Xmin, Ymin, Zmin, Xmax, Ymax, Zmax);
 
-	BRepMesh_FastDiscret::Parameters p;
-	auto occt_discret = BRepMesh_FastDiscret(b, p);
-	occt_discret.Perform(occt_compound_all);
+	//BRepMesh_FastDiscret::Parameters p;
+	//auto occt_discret = BRepMesh_FastDiscret(b, p);
+	//occt_discret.Perform(occt_compound_all);
 
-	auto occt_mesh = BRepMesh_IncrementalMesh(occt_compound_all, 1);
+	auto occt_mesh_10 = BRepMesh_IncrementalMesh(occt_compound_all, 10, false, 5, true, false);
 
-	if (occt_mesh.IsDone()) {
+	if (occt_mesh_10.IsDone()) {
 		cout << "mesh done" << endl;
 	}
 
 	vector<gp_Pnt> vs;
 	vector<vector<int>> fs;
 
+	int counter = 0;
 	for (TopExp_Explorer face_exp(occt_compound_all, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
 		TopLoc_Location location;
 		auto &face = TopoDS::Face(face_exp.Current());
 
 		auto triangulation = BRep_Tool::Triangulation(face, location);
 
+		counter++;
 		if (!triangulation.IsNull()) {
 			append_mesh(vs, fs, triangulation);
 		}
 		else {
-
+			cout <<counter << " is null" << endl;
 		}
 	}
 	
-	write_obj(vs, fs, "small12.obj");
+	write_obj(vs, fs, (case_name + ".obj").c_str());
 
 	ON::End();
 	system("pause");
