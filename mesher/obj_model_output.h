@@ -22,3 +22,34 @@ void merge_vertices(vector<ON_3fPoint>& vertices, vector<vector<int>>& faces, do
 void write_obj(vector<gp_Pnt>& vertices, vector<vector<int>>& faces, const char* file_name);
 
 void write_obj(vector<ON_3fPoint>& vertices, vector<vector<int>>& faces, const char* file_name);
+
+class RhinoMesh {
+public:
+	vector<ON_3fPoint> v;
+	vector<vector<int>> f;
+	void append_mesh(const ON_Mesh* mesh) {
+		::append_mesh(v, f, mesh);
+	}
+	void write_obj(const char* file_name) {
+		::write_obj(v,f,file_name);
+	}
+	void merge_vertices() {
+		::merge_vertices(v,f);
+	}
+};
+
+class OcctMesh {
+public:
+	vector<gp_Pnt> v;
+	vector<vector<int>> f;
+	void append_mesh(const opencascade::handle<Poly_Triangulation> triangulation) {
+		::append_mesh(v, f, triangulation);
+	}
+
+	void write_obj(const char* file_name) {
+		::write_obj(v, f, file_name);
+	}
+	void merge_vertices() {
+		::merge_vertices(v, f);
+	}
+};
