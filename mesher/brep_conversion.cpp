@@ -29,19 +29,9 @@ TopoDS_Edge convert_opennurbs_trim_to_occt_edge(ON_BrepTrim* trim, Handle_Geom_B
 
 TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, Handle_Geom_BSplineSurface& occt_surface) {
 	BRepBuilderAPI_MakeWire occt_wire;
-	bool wire_init = false;
-
 	for (int i = 0; i < loop->TrimCount(); i++) {
-		if (loop->Trim(i)->Edge() != nullptr) {
-			auto occt_edge = convert_opennurbs_trim_to_occt_edge(loop->Trim(i), occt_surface);
-			occt_wire.Add(occt_edge);
-		}
-		else {
-			//这里 trim 的类型没有详细的研究。
-			//当前忽略singular的trim。
-			//如果之后有时间的话，应该详细研究下保证不出问题。
-			//cout << "trim type:" << loop->Trim(i)->m_type << endl;
-		}
+		auto occt_edge = convert_opennurbs_trim_to_occt_edge(loop->Trim(i), occt_surface);
+		occt_wire.Add(occt_edge);
 	}
 
 	return occt_wire;
@@ -50,10 +40,8 @@ TopoDS_Wire convert_opennurbs_loop_to_occt_wire(const ON_BrepLoop* loop, Handle_
 TopoDS_Face convert_opennurbs_face_to_occt_face(const ON_BrepFace& face) {
 	BRep_Builder brep_builder;
 
-	//这里遇到个问题。一定要先加外环。
-	//如果直接遍历环往上加，会出现面裁剪出问题的情况。
 	auto occt_surface = convert_opennurbs_surface_to_occt_surface(face.NurbsSurface());
-	TopoDS_Face occt_face;// = BRepBuilderAPI_MakeFace(occt_surface, Precision::Confusion());
+	TopoDS_Face occt_face;
 	brep_builder.MakeFace(occt_face, occt_surface, Precision::Confusion());
 
 	if (face.OuterLoop()) {
