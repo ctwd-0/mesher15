@@ -249,3 +249,4 @@ ModelManifest.xml
 *.brep
 *.rhl
 /mesher/small12.brep.aa
+/mesher/ng.ini

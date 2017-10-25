@@ -8,6 +8,16 @@
 
 #include <opennurbs.h>
 
+#include <TopoDS.hxx>
+#include <TopoDS_Face.hxx>
+
+#include <TopExp_Explorer.hxx>
+#include <Poly_Triangulation.hxx>
+
+#include <BRepTools.hxx>
+#include <BRepMesh.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+
 using namespace std;
 
 
@@ -53,3 +63,5 @@ public:
 		::merge_vertices(v, f);
 	}
 };
+
+OcctMesh generate_occt_mesh(const TopoDS_Shape& shape, const BRepMesh_FastDiscret::Parameters& p);

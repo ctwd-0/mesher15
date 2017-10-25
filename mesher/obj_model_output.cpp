@@ -198,3 +198,22 @@ void write_obj(vector<ON_3fPoint>& vertices, vector<vector<int>>& faces, const c
 
 	fclose(f);
 }
+
+OcctMesh generate_occt_mesh(
+	const TopoDS_Shape& shape,
+	const BRepMesh_FastDiscret::Parameters& p) {
+	OcctMesh result;
+
+	auto x = BRepMesh_IncrementalMesh(shape, p);
+	for (TopExp_Explorer face_exp(shape, TopAbs_FACE); face_exp.More(); face_exp.Next()) {
+		TopLoc_Location location;
+
+		auto &face = TopoDS::Face(face_exp.Current());
+		auto triangulation = BRep_Tool::Triangulation(face, location);
+		if (!triangulation.IsNull()) {
+			result.append_mesh(triangulation);
+		}
+		BRepTools::Clean(face);
+	}
+	return result;
+}
