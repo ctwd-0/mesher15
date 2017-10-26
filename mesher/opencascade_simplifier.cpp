@@ -6,6 +6,8 @@
 
 #include <omp.h>
 
+#include <math.h>
+
 using namespace std;
 
 #define ON_DLL_IMPORTS
@@ -41,7 +43,6 @@ int main() {
 
 	case_name = "full";
 
-
 	mkdir((output_prefix + case_name).c_str());
 	mkdir((output_prefix + case_name + "_opennurbs").c_str());
 	mkdir((output_prefix + case_name + "_groups").c_str());
@@ -67,14 +68,9 @@ int main() {
 
 	cout <<"number of groups: "<< group_info.group_ids.size() << endl;
 
-	map<int, TopoDS_Compound> breps;
+	vector<TopoDS_Compound> breps(model->m_object_table.Count());
 
-	map<int, RhinoMesh> obj_mesh;
-
-
-	for (int obj_id = 0; obj_id < model->m_object_table.Count(); obj_id++) {
-		obj_mesh[obj_id] = RhinoMesh();
-	}
+	vector<RhinoMesh> obj_mesh(model->m_object_table.Count());
 
 #pragma omp parallel for  
 	for (int obj_id = 0; obj_id < model->m_object_table.Count(); obj_id++) {
@@ -99,8 +95,7 @@ int main() {
 		}
 
 		if (IsModelObjectVisible(*model, object)) {
-			auto occt_compound = convert_opennurbs_solid_to_occt_solid(brep);
-			breps[obj_id] = occt_compound;
+			breps[obj_id] = convert_opennurbs_solid_to_occt_solid(brep);
 		}
 	}
 
@@ -113,21 +108,47 @@ int main() {
 
 	map<int, map<int, OcctMesh>> grp_meshs;
 
-	//这段代码用来测试以不同的精度离散obj
-	//for (auto &x : breps) {
-	//	auto obj_id = x.first;
-	//	auto &brep = x.second;
-	//	BRepMesh_FastDiscret::Parameters p;
-	//	p.Angle = 0.5;
-	//	p.Deflection = 0.1;
-	//	auto mesh1 = generate_occt_mesh(brep, p);
-	//
-	//	p.Angle = 0.5;
-	//	p.Deflection = 1;
-	//	auto mesh2 = generate_occt_mesh(brep, p);
-	//	mesh1.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_0.1.obj").c_str());
-	//	mesh2.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_1.0.obj").c_str());
-	//}
+	map<int, BRepMesh_FastDiscret::Parameters> grp_para;
+
+	for (auto grp_id : group_info.group_ids) {
+		auto& obj_ids = group_info.group_id_objects[grp_id];
+		int vs = 0;
+		int fs = 0;
+
+		for (auto obj_id : obj_ids) {
+			vs += obj_mesh[obj_id].v.size();
+			fs += obj_mesh[obj_id].f.size();
+		}
+
+		if (vs <= MAX_V && fs <= MAX_F) {
+			//use original mesh;
+		}
+		else {
+			BRepMesh_FastDiscret::Parameters p;
+
+			auto multiplier =  ceil((double)fs / MAX_F);
+			p.Deflection = 2.0 * multiplier;
+			p.Angle = 1.0 * multiplier;
+
+			grp_para[grp_id] = p;
+			grp_meshs[grp_id] = map<int, OcctMesh>();
+			for (auto obj_id : obj_ids) {
+				grp_meshs[grp_id][obj_id] = OcctMesh();
+			}
+		}
+	}
+
+
+//#pragma omp parallel for
+	for (auto i = 0; i < group_info.object_ids.size(); i++) {
+		auto obj_id = group_info.object_ids[i];
+		cout << obj_id << endl;
+		for (auto grp_id : group_info.object_id_groups[obj_id]) {
+			if (grp_para.count(grp_id) != 0) {
+				grp_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_para[grp_id]);
+			}
+		}
+	}
 
 
 	//for (auto grp_id : group_info.group_ids) {
@@ -161,6 +182,23 @@ int main() {
 	//	}
 	//}
 	
+
+	//这段代码用来测试以不同的精度离散obj
+	//for (auto &x : breps) {
+	//	auto obj_id = x.first;
+	//	auto &brep = x.second;
+	//	BRepMesh_FastDiscret::Parameters p;
+	//	p.Angle = 0.5;
+	//	p.Deflection = 0.1;
+	//	auto mesh1 = generate_occt_mesh(brep, p);
+	//
+	//	p.Angle = 0.5;
+	//	p.Deflection = 1;
+	//	auto mesh2 = generate_occt_mesh(brep, p);
+	//	mesh1.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_0.1.obj").c_str());
+	//	mesh2.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_1.0.obj").c_str());
+	//}
+
 	system("pause");
 
 	return 0;

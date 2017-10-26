@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -33,21 +34,46 @@ public:
 		generate();
 		compose();
 	}
+	vector<int> object_ids;
 	map<int, set<int>> group_id_objects;
+	map<int, set<int>> object_id_groups;
 	set<int> group_ids;
 	map<int, set<int>> group_id_groups;
 	set<int> root_group_ids;
 	map<int, set<int>> group_composed_of_groups;
 	map<int, set<int>> group_composed_of_objects;
 
+	void output() {
+		for (auto & x: group_ids) {
+			cout << "group id: " << x << endl;
+			cout << "group ids: ";
+			for (auto y : group_composed_of_groups[x]) {
+				cout << y <<" ";
+			}
+			cout << endl;
+			cout << "object ids: ";
+			for (auto y : group_composed_of_objects[x]) {
+				cout << y << " ";
+			}
+			cout << endl;
+			cout << endl;
+		}
+	}
+
 private:
 	void generate() {
-		for (int group_id = 0; group_id < m_model->m_group_table.Count(); group_id++) {
-			ON_Group& group = m_model->m_group_table[group_id];
-		}
+		//for (int group_id = 0; group_id < m_model->m_group_table.Count(); group_id++) {
+		//	ON_Group& group = m_model->m_group_table[group_id];
+		//}
 		
 		for (int object_id = 0; object_id < m_model->m_object_table.Count(); object_id++) {
-			ONX_Model_Object object = m_model->m_object_table[object_id];
+			auto object = m_model->m_object_table[object_id];
+			if (!IsModelObjectVisible(*m_model, object)) {
+				continue;
+			}
+
+			object_ids.push_back(object_id);
+			object_id_groups[object_id] = set<int>();
 
 			auto group_count = object.m_attributes.GroupCount();
 			auto group_list = object.m_attributes.GroupList();
@@ -59,6 +85,7 @@ private:
 					group_ids.insert(group_id);
 				}
 				group_id_objects[group_id].insert(object_id);
+				object_id_groups[object_id].insert(group_id);
 			}
 		}
 
@@ -97,6 +124,11 @@ private:
 					}
 				}
 				for (auto obj_id : obj_ids) {
+					group_composed_of_objects[group_id].insert(obj_id);
+				}
+			}
+			else {
+				for (auto obj_id : group_id_objects[group_id]) {
 					group_composed_of_objects[group_id].insert(obj_id);
 				}
 			}
