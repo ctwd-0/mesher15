@@ -1,12 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <thread>
+#include <mutex>
 #include <set>
-#include <time.h>
-
-#include <omp.h>
 
 #include <math.h>
+#include <omp.h>
+#include <time.h>
 
 using namespace std;
 
@@ -35,8 +36,63 @@ const int MAX_F = 100 * 10000;
 
 const int thread_count = 8;
 
-int main() {
+class nurbs_conversion_data {
+public:
+	mutex lock;
+	volatile int now_obj_id;
+	volatile int finished_thread;
+	ONX_Model* model;
+	vector<RhinoMesh>* obj_mesh;
+	vector<TopoDS_Compound>* breps;
+};
 
+int process_nurbs(nurbs_conversion_data* data) {
+	int obj_id;
+
+	while (true)
+	{
+		data->lock.lock();
+		if (data->now_obj_id < data->model->m_object_table.Count()) {
+			obj_id = data->now_obj_id;
+			(data->now_obj_id)++;
+			data->lock.unlock();
+		}
+		else {
+			data->finished_thread++;
+			data->lock.unlock();
+			break;
+		}
+
+		ONX_Model_Object &object = data->model->m_object_table[obj_id];
+
+		const ON_Brep* brep = ON_Brep::Cast(object.m_object);
+
+		if (brep == nullptr) {
+			continue;
+		}
+
+		ON_SimpleArray<const ON_Mesh*> meshes;
+		int mc = brep->GetMesh(ON::render_mesh, meshes);
+
+		if (mc) {
+			for (int i = 0; i < meshes.Count(); i++) {
+				auto mesh = meshes[i];
+				(*(data->obj_mesh))[obj_id].append_mesh(mesh);
+				//append_mesh(data->obj_mesh[obj_id].v, data.obj_mesh[obj_id].f, mesh);
+			}
+			(*(data->obj_mesh))[obj_id].merge_vertices();
+			//obj_mesh[obj_id].write_obj((case_name + "_opennurbs\\obj_" + to_string(obj_id) + ".obj").c_str());
+		}
+
+		if (IsModelObjectVisible(*(data->model), object)) {
+			(*(data->breps))[obj_id] = convert_opennurbs_solid_to_occt_solid(brep);
+		}
+	}
+
+	return 0;
+}
+
+int main() {
 	string case_name;
 
 	string output_prefix = "D:\\garbage\\";
@@ -47,6 +103,10 @@ int main() {
 	mkdir((output_prefix + case_name + "_opennurbs").c_str());
 	mkdir((output_prefix + case_name + "_groups").c_str());
 
+
+	clock_t start, end;
+
+	start = clock();
 	ON::Begin();
 
 	ONX_Model *model = new ONX_Model();;
@@ -63,6 +123,9 @@ int main() {
 	}
 	ON::CloseFile(archive_fp);
 
+	end = clock();
+
+	cout << "finished reading file. " << end - start << "ms used." << endl;
 
 	OpennurbsGroupInfo group_info(model);
 
@@ -72,44 +135,50 @@ int main() {
 
 	vector<RhinoMesh> obj_mesh(model->m_object_table.Count());
 
-#pragma omp parallel for  
-	for (int obj_id = 0; obj_id < model->m_object_table.Count(); obj_id++) {
-		ONX_Model_Object &object = model->m_object_table[obj_id];
+	nurbs_conversion_data data;
+	data.model = model;
+	data.obj_mesh = &obj_mesh;
+	data.breps = &breps;
+	
+	start = clock();
 
-		const ON_Brep* brep = ON_Brep::Cast(object.m_object);
-
-		if (brep == nullptr) {
-			continue;
-		}
-
-		ON_SimpleArray<const ON_Mesh*> meshes;
-		int mc = brep->GetMesh(ON::render_mesh, meshes);
-
-		if (mc) {
-			for (int i = 0; i < meshes.Count(); i++) {
-				auto mesh = meshes[i];
-				append_mesh(obj_mesh[obj_id].v, obj_mesh[obj_id].f, mesh);
-			}
-			obj_mesh[obj_id].merge_vertices();
-			//obj_mesh[obj_id].write_obj((case_name + "_opennurbs\\obj_" + to_string(obj_id) + ".obj").c_str());
-		}
-
-		if (IsModelObjectVisible(*model, object)) {
-			breps[obj_id] = convert_opennurbs_solid_to_occt_solid(brep);
-		}
+	for (int i = 0; i < thread_count; i++) {
+		thread thd(&process_nurbs, &data);
+		thd.detach();
 	}
 
+	while (true) {
+		Sleep(50);
+		data.lock.lock();
+		if (data.now_obj_id >= model->m_object_table.Count()
+			&& data.finished_thread == thread_count) {
+			data.lock.unlock();
+			break;
+		}
+		else {
+			data.lock.unlock();
+		}
+	}
+	end = clock();
+
+	cout << "convert opennurbs to opencascad finished. " << end - start << "ms used." << endl;
+
+	start = clock();
+	
 	model->Destroy();
 	model->DestroyCache();
 	delete model;
-	cout << "convert opennurbs to opencascad finished." << endl;
-
+	
+	end = clock();
+	cout << "delete opennurbs model finished. " << end - start << "ms used." << endl;
+	
 	ON::End();
 
 	map<int, map<int, OcctMesh>> grp_meshs;
 
 	map<int, BRepMesh_FastDiscret::Parameters> grp_para;
 
+	start = clock();
 	for (auto grp_id : group_info.group_ids) {
 		auto& obj_ids = group_info.group_id_objects[grp_id];
 		int vs = 0;
@@ -138,11 +207,10 @@ int main() {
 		}
 	}
 
-
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (auto i = 0; i < group_info.object_ids.size(); i++) {
 		auto obj_id = group_info.object_ids[i];
-		cout << obj_id << endl;
+		//cout << obj_id << endl;
 		for (auto grp_id : group_info.object_id_groups[obj_id]) {
 			if (grp_para.count(grp_id) != 0) {
 				grp_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_para[grp_id]);
@@ -150,54 +218,8 @@ int main() {
 		}
 	}
 
-
-	//for (auto grp_id : group_info.group_ids) {
-	//	auto& obj_ids = group_info.map_group_id_objects[grp_id];
-	//	int vs = 0;
-	//	int fs = 0;
-	//
-	//	for (auto obj_id : obj_ids) {
-	//		vs += obj_mesh[obj_id].v.size();
-	//		fs += obj_mesh[obj_id].f.size();
-	//	}
-	//
-	//	if (vs <= MAX_V && fs < MAX_F) {
-	//		//use original mesh;
-	//	}
-	//	else {
-	//		//generate mesh;
-	//		double line_tolerance = 1;
-	//		double angle_tolerance = 0.5;
-	//
-	//		double multiplier = fs / MAX_F;
-	//		line_tolerance *= multiplier;
-	//		angle_tolerance *= multiplier;
-	//		BRepMesh_FastDiscret::Parameters p;
-	//
-	//		p.Deflection = line_tolerance;
-	//		p.Angle = angle_tolerance;
-	//		for (auto obj_id : obj_ids) {
-	//			grp_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], p);
-	//		}
-	//	}
-	//}
-	
-
-	//这段代码用来测试以不同的精度离散obj
-	//for (auto &x : breps) {
-	//	auto obj_id = x.first;
-	//	auto &brep = x.second;
-	//	BRepMesh_FastDiscret::Parameters p;
-	//	p.Angle = 0.5;
-	//	p.Deflection = 0.1;
-	//	auto mesh1 = generate_occt_mesh(brep, p);
-	//
-	//	p.Angle = 0.5;
-	//	p.Deflection = 1;
-	//	auto mesh2 = generate_occt_mesh(brep, p);
-	//	mesh1.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_0.1.obj").c_str());
-	//	mesh2.write_obj((output_prefix + case_name + "\\obj_" + to_string(obj_id) + "_1.0.obj").c_str());
-	//}
+	end = clock();
+	cout << "generate mesh finished. " << end - start << "ms used." << endl;
 
 	system("pause");
 
