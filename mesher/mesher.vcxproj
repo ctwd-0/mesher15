@@ -125,6 +125,7 @@
     <ClInclude Include="folder.h" />
     <ClInclude Include="obj_model_output.h" />
     <ClInclude Include="opennurbs_utils.h" />
+    <ClInclude Include="xbj.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

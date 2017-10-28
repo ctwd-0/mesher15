@@ -42,7 +42,7 @@ public:
 	volatile int now_obj_id;
 	volatile int finished_thread;
 	ONX_Model* model;
-	vector<RhinoMesh>* obj_mesh;
+	vector<Mesh>* obj_mesh;
 	vector<TopoDS_Compound>* breps;
 };
 
@@ -75,12 +75,12 @@ int process_nurbs(nurbs_conversion_data* data) {
 		int mc = brep->GetMesh(ON::render_mesh, meshes);
 
 		if (mc) {
+			(*(data->obj_mesh))[obj_id].name = "object_" + to_string(obj_id);
 			for (int i = 0; i < meshes.Count(); i++) {
 				auto mesh = meshes[i];
 				(*(data->obj_mesh))[obj_id].append_mesh(mesh);
-				//append_mesh(data->obj_mesh[obj_id].v, data.obj_mesh[obj_id].f, mesh);
 			}
-			(*(data->obj_mesh))[obj_id].merge_vertices();
+			//(*(data->obj_mesh))[obj_id].merge_vertices();
 			//obj_mesh[obj_id].write_obj((case_name + "_opennurbs\\obj_" + to_string(obj_id) + ".obj").c_str());
 		}
 
@@ -103,7 +103,6 @@ int main() {
 	mkdir((output_prefix + case_name + "_opennurbs").c_str());
 	mkdir((output_prefix + case_name + "_groups").c_str());
 
-
 	clock_t start, end;
 
 	start = clock();
@@ -113,6 +112,7 @@ int main() {
 	FILE* archive_fp = ON::OpenFile((case_name + ".3dm").c_str(), "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model->Read(archive);
+	
 	if (rc) {
 		cout << "reading 3dm file success" << endl;
 	}
@@ -121,11 +121,12 @@ int main() {
 		system("pause");
 		return -1;
 	}
+
 	ON::CloseFile(archive_fp);
 
 	end = clock();
 
-	cout << "finished reading file. " << end - start << "ms used." << endl;
+	cout << "finished reading file. " << (end - start) / 1000.0 << "s used." << endl;
 
 	OpennurbsGroupInfo group_info(model);
 
@@ -133,7 +134,7 @@ int main() {
 
 	vector<TopoDS_Compound> breps(model->m_object_table.Count());
 
-	vector<RhinoMesh> obj_mesh(model->m_object_table.Count());
+	vector<Mesh> obj_mesh(model->m_object_table.Count());
 
 	nurbs_conversion_data data;
 	data.model = model;
@@ -161,7 +162,7 @@ int main() {
 	}
 	end = clock();
 
-	cout << "convert opennurbs to opencascad finished. " << end - start << "ms used." << endl;
+	cout << "convert opennurbs to opencascad finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
 	
@@ -170,11 +171,13 @@ int main() {
 	delete model;
 	
 	end = clock();
-	cout << "delete opennurbs model finished. " << end - start << "ms used." << endl;
+	cout << "delete opennurbs model finished. " << (end - start) / 1000.0 << "s used." << endl;
 	
 	ON::End();
 
-	map<int, map<int, OcctMesh>> grp_meshs;
+	map<int, map<int, Mesh>> grp_meshs;
+
+	map<int, Mesh> grp_mesh;
 
 	map<int, BRepMesh_FastDiscret::Parameters> grp_para;
 
@@ -194,15 +197,14 @@ int main() {
 		}
 		else {
 			BRepMesh_FastDiscret::Parameters p;
-
 			auto multiplier =  ceil((double)fs / MAX_F);
 			p.Deflection = 2.0 * multiplier;
 			p.Angle = 1.0 * multiplier;
 
 			grp_para[grp_id] = p;
-			grp_meshs[grp_id] = map<int, OcctMesh>();
+			grp_meshs[grp_id] = map<int, Mesh>();
 			for (auto obj_id : obj_ids) {
-				grp_meshs[grp_id][obj_id] = OcctMesh();
+				grp_meshs[grp_id][obj_id] = Mesh();
 			}
 		}
 	}
@@ -217,9 +219,49 @@ int main() {
 			}
 		}
 	}
+	end = clock();
+	cout << "generate mesh finished. " << (end - start) / 1000.0 << "s used." << endl;
+	
+	start = clock();
+	vector<int> grp_ids;
+	for (auto grp_id : group_info.group_ids) {
+		grp_mesh[grp_id] = Mesh();
+		grp_ids.push_back(grp_id);
+	}
+
+#pragma omp parallel for
+	for (auto i = 0; i < grp_ids.size(); i++) {
+		auto grp_id = grp_ids[i];
+		grp_mesh[grp_id] = Mesh();
+		grp_mesh[grp_id].name = "group_" + to_string(grp_id);
+		if (grp_meshs.count(grp_id)) {
+			for (auto& x : grp_meshs[grp_id]) {
+				auto& obj_mesh = x.second;
+				grp_mesh[grp_id].append_mesh(obj_mesh);
+			}
+		}
+		else {
+			auto& obj_ids = group_info.group_id_objects[grp_id];
+			for (auto obj_id : obj_ids) {
+				grp_mesh[grp_id].append_mesh(obj_mesh[obj_id]);
+			}
+		}
+
+		//cout <<"group "<< grp_id << "gets "<< grp_mesh[grp_id].v.size() <<" vertices."<< endl;
+		//grp_mesh[grp_id].merge_vertices();
+	}
 
 	end = clock();
-	cout << "generate mesh finished. " << end - start << "ms used." << endl;
+	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
+
+	start = clock();
+	breps.swap(vector<TopoDS_Compound>());
+	obj_mesh.swap(vector<Mesh>());
+	grp_meshs.swap(map<int, map<int, Mesh>>());
+	grp_mesh.swap(map<int, Mesh>());
+	grp_para.swap(map<int, BRepMesh_FastDiscret::Parameters>());
+	end = clock();
+	cout << "release memory finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	system("pause");
 
