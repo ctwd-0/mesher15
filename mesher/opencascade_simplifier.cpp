@@ -80,7 +80,7 @@ int process_nurbs(nurbs_conversion_data* data) {
 				auto mesh = meshes[i];
 				(*(data->obj_mesh))[obj_id].append_mesh(mesh);
 			}
-			//(*(data->obj_mesh))[obj_id].merge_vertices();
+			(*(data->obj_mesh))[obj_id].merge_vertices();
 			//obj_mesh[obj_id].write_obj((case_name + "_opennurbs\\obj_" + to_string(obj_id) + ".obj").c_str());
 		}
 
@@ -248,7 +248,7 @@ int main() {
 		}
 
 		//cout <<"group "<< grp_id << "gets "<< grp_mesh[grp_id].v.size() <<" vertices."<< endl;
-		//grp_mesh[grp_id].merge_vertices();
+		grp_mesh[grp_id].merge_vertices();
 	}
 
 	end = clock();

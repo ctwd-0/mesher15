@@ -2,11 +2,13 @@
 
 #include<vector>
 #include<map>
+#include <algorithm>
+#include <set>
+
+#include <opennurbs.h>
 
 #include <gp_Pnt.hxx>
 #include <Poly_Triangulation.hxx>
-
-#include <opennurbs.h>
 
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
