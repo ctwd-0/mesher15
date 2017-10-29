@@ -1,5 +1,9 @@
 #pragma once
 
+#define ON_DLL_IMPORTS
+
+#include "opennurbs\opennurbs_dynamic_linking.h"
+
 #include <opennurbs.h>
 #include <map>
 #include <set>

@@ -11,10 +11,6 @@
 
 using namespace std;
 
-#define ON_DLL_IMPORTS
-
-#include "opennurbs\opennurbs_dynamic_linking.h"
-
 #include "opennurbs_utils.h"
 
 #include "obj_model_output.h"
@@ -26,10 +22,6 @@ using namespace std;
 #include "folder.h"
 
 #include <Precision.hxx>
-
-#pragma comment(lib, "TKTopAlgo.lib")
-#pragma comment(lib, "TKMesh.lib")
-
 
 const int MAX_V = 50 * 10000;
 const int MAX_F = 100 * 10000;
@@ -114,10 +106,10 @@ int main() {
 	bool rc = model->Read(archive);
 	
 	if (rc) {
-		cout << "reading 3dm file success" << endl;
+		//cout << "read 3dm file successed." << endl;
 	}
 	else {
-		cout << "failed" << endl;
+		cout << "read 3dm file failed." << endl;
 		system("pause");
 		return -1;
 	}
@@ -126,7 +118,7 @@ int main() {
 
 	end = clock();
 
-	cout << "finished reading file. " << (end - start) / 1000.0 << "s used." << endl;
+	cout << "read 3dm file finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	OpennurbsGroupInfo group_info(model);
 

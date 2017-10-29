@@ -20,6 +20,9 @@
 #include <BRepMesh.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 
+
+#pragma comment(lib, "TKMesh.lib")
+
 using namespace std;
 
 class Mesh;
