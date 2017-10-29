@@ -65,7 +65,7 @@ private:
 		//for (int group_id = 0; group_id < m_model->m_group_table.Count(); group_id++) {
 		//	ON_Group& group = m_model->m_group_table[group_id];
 		//}
-		
+		int max_group_size = 0;
 		for (int object_id = 0; object_id < m_model->m_object_table.Count(); object_id++) {
 			auto object = m_model->m_object_table[object_id];
 			if (!IsModelObjectVisible(*m_model, object)) {
@@ -86,6 +86,20 @@ private:
 				}
 				group_id_objects[group_id].insert(object_id);
 				object_id_groups[object_id].insert(group_id);
+			}
+		}
+
+		for (auto&x : group_id_objects) {
+			if (x.second.size() > max_group_size) {
+				max_group_size = x.second.size();
+			}
+		}
+		if (max_group_size < object_ids.size()) {
+			group_ids.insert(-1);
+			group_id_objects[-1] = set<int>();
+			for (auto obj_id : object_ids) {
+				group_id_objects[-1].insert(obj_id);
+				object_id_groups[obj_id].insert(-1);
 			}
 		}
 
