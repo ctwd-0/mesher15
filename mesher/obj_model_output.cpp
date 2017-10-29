@@ -104,16 +104,8 @@ private:
 	vector<gp_Pnt>& _vertices;
 };
 
-#define __lb(x, X) auto iter_##x = lower_bound(_v##x.begin(), _v##x.end(), _vertices[index].X(), comp_##x(_vertices));
-#define __dc(x, X) while (iter_##x > _v##x.begin() && abs(_vertices[*iter_##x].X() - _vertices[index].X())< eps) iter_##x--;
-#define __ad(x, X) \
-		while (iter_##x < _v##x.end() && !(_vertices[*iter_##x].X() - _vertices[index].X() > eps)){\
-			if (abs(_vertices[*iter_##x].X() - _vertices[index].X()) < eps) {\
-				c_##x.insert(*iter_##x);\
-			}\
-		iter_##x++;\
-		}
-
+#define ___dl(x, X) while (p_##x > 0 && _vertices[index].X() - _vertices[_v##x[p_##x]].X() < eps) p_##x--;
+#define ___ad(x, X) while (p_##x < _vertices.size() && abs(_vertices[index].X() - _vertices[_v##x[p_##x]].X()) < eps) { c_##x.insert(_v##x[p_##x]); p_##x++; }
 class sort_for_merge {
 public:
 	sort_for_merge(vector<gp_Pnt>& vertices,
@@ -126,47 +118,17 @@ public:
 	vector<int> candidate(int index, double eps) {
 		eps = abs(eps);
 		set<int> c_x, c_y, c_z;
-		//__lb(x, X);
-		//__lb(y, Y);
-		//__lb(z, Z);
-		//__dc(x, X);
-		//__dc(y, Y);
-		//__dc(z, Z);
-		//__ad(x, X);
-		//__ad(y, Y);
-		//__ad(z, Z);
-
-		auto iter_x = lower_bound(_vx.begin(), _vx.end(), _vertices[index].X(), comp_x(_vertices));;
-		auto iter_y = lower_bound(_vy.begin(), _vy.end(), _vertices[index].Y(), comp_y(_vertices));;
-		auto iter_z = lower_bound(_vz.begin(), _vz.end(), _vertices[index].Z(), comp_z(_vertices));;
-		while (iter_x > _vx.begin() && abs(_vertices[*iter_x].X() - _vertices[index].X()) < eps) {
-			iter_x--;;
-		}
-		while (iter_y > _vy.begin() && abs(_vertices[*iter_y].Y() - _vertices[index].Y()) < eps) {
-			iter_y--;;
-		}
-		while (iter_z > _vz.begin() && abs(_vertices[*iter_z].Z() - _vertices[index].Z()) < eps) {
-			iter_z--;;
-		}
-		while (iter_x < _vx.end() && !(_vertices[*iter_x].X() - _vertices[index].X() > eps)) {
-			if (abs(_vertices[*iter_x].X() - _vertices[index].X()) < eps) {
-				c_x.insert(*iter_x);
-			}
-			iter_x++;
-		};
-		while (iter_y < _vy.end() && !(_vertices[*iter_y].Y() - _vertices[index].Y() > eps)) {
-			if (abs(_vertices[*iter_y].Y() - _vertices[index].Y()) < eps) {
-				c_y.insert(*iter_y);
-			} iter_y++;
-		};
-		while (iter_z < _vz.end() && !(_vertices[*iter_z].Z() - _vertices[index].Z() > eps)) {
-			if (abs(_vertices[*iter_z].Z() - _vertices[index].Z()) < eps) {
-				c_z.insert(*iter_z);
-			}
-			iter_z++;
-		};
-
 		vector<int> result;
+
+		auto p_x = pos_x[index];
+		auto p_y = pos_y[index];
+		auto p_z = pos_z[index];
+		___dl(x, X);
+		___dl(y, Y);
+		___dl(z, Z);
+		___ad(x, X);
+		___ad(y, X);
+		___ad(z, Z);
 		eps *= eps;
 		for (auto i : c_x) {
 			if (i != index && c_y.count(i) != 0 && c_x.count(i) != 0) {
@@ -190,11 +152,20 @@ private:
 		sort(_vx.begin(), _vx.end(), comp_x(_vertices));
 		sort(_vy.begin(), _vy.end(), comp_y(_vertices));
 		sort(_vz.begin(), _vz.end(), comp_z(_vertices));
+		for (int i = 0; i < _vertices.size(); i++) {
+			pos_x[_vx[i]] = i;
+			pos_y[_vy[i]] = i;
+			pos_z[_vz[i]] = i;
+		}
 	}
 	vector<gp_Pnt>& _vertices;
 	vector<int>& _vx;
 	vector<int>& _vy;
 	vector<int>& _vz;
+	map<int, int> pos_x;
+	map<int, int> pos_y;
+	map<int, int> pos_z;
+
 };
 
 void merge_vertices(vector<gp_Pnt>& vertices, vector<vector<int>>& faces, double eps) {
