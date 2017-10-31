@@ -37,6 +37,10 @@ public:
 		:m_model(model){
 		generate();
 		compose();
+		for (auto group_id : root_group_ids) {
+			cout << group_id << " ";
+		}
+		cout << endl;
 	}
 	vector<int> object_ids;
 	map<int, set<int>> group_id_objects;
@@ -76,6 +80,11 @@ private:
 				continue;
 			}
 
+			const ON_Brep* brep = ON_Brep::Cast(object.m_object);
+			if (brep == nullptr) {
+				continue;
+			}
+
 			object_ids.push_back(object_id);
 			object_id_groups[object_id] = set<int>();
 
@@ -92,6 +101,8 @@ private:
 				object_id_groups[object_id].insert(group_id);
 			}
 		}
+
+		//cout << "object_ids.size() = "<< object_ids .size()<<endl;
 
 		for (auto&x : group_id_objects) {
 			if (x.second.size() > max_group_size) {

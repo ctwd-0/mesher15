@@ -92,10 +92,12 @@ int main() {
 	case_name = "full";
 
 	mkdir((output_prefix + case_name).c_str());
-	mkdir((output_prefix + case_name + "_opennurbs").c_str());
-	mkdir((output_prefix + case_name + "_groups").c_str());
+	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
+	//mkdir((output_prefix + case_name + "_groups").c_str());
 
 	clock_t start, end;
+
+	string output_dir = output_prefix + case_name + "\\";
 
 	start = clock();
 	ON::Begin();
@@ -248,6 +250,26 @@ int main() {
 
 	end = clock();
 	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
+
+	start = clock();
+	for (auto& obj_mesh : obj_meshs) {
+		if(obj_mesh.name.size()!= 0)
+			obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
+	}
+	for (auto & x : grp_grp_meshs) {
+		for (auto& y : x.second) {
+			auto& grp_mesh = y.second;
+			grp_mesh.write_obj((output_dir + grp_mesh.name + ".obj").c_str());
+		}
+	}
+	for (auto & x : grp_obj_meshs) {
+		for (auto& y : x.second) {
+			auto& obj_mesh = y.second;
+			obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
+		}
+	}
+	end = clock();
+	cout << "output obj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
 	breps.swap(vector<TopoDS_Compound>());

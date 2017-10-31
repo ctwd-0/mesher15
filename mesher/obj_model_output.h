@@ -59,6 +59,9 @@ public:
 	void merge_vertices() {
 		::merge_vertices(v, f);
 	}
+	bool empty() {
+		return (v.size() == 0) || (f.size() == 0);
+	}
 };
 
 Mesh generate_occt_mesh(const TopoDS_Shape& shape, const BRepMesh_FastDiscret::Parameters& p);
