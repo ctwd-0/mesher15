@@ -89,7 +89,7 @@ int main() {
 
 	string output_prefix = "D:\\garbage\\";
 
-	case_name = "small8";
+	case_name = "full";
 
 	mkdir((output_prefix + case_name).c_str());
 	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
@@ -261,9 +261,9 @@ int main() {
 		}
 		map_obj_meshs[i] = obj_mesh;
 		map_obj_meshs[i].generate_xbj(8);
-		xbj_len += obj_mesh.len_xbj;
+		xbj_len += map_obj_meshs[i].len_xbj;
 	}
-	obj_meshs.swap(vector<Mesh>());
+
 	for (auto & x : grp_grp_meshs) {
 		for (auto& y : x.second) {
 			auto& grp_mesh = y.second;
@@ -285,6 +285,10 @@ int main() {
 	cout << "output obj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
+	group_info.release_mem();
+	grp_ids.swap(vector<int>());
+	output_xbj.release_mem();
+	obj_meshs.swap(vector<Mesh>());
 	breps.swap(vector<TopoDS_Compound>());
 	map_obj_meshs.swap(map<int, Mesh>());
 	grp_obj_meshs.swap(map<int, map<int, Mesh>>());

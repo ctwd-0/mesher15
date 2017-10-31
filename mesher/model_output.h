@@ -165,11 +165,15 @@ private:
 
 Mesh generate_occt_mesh(const TopoDS_Shape& shape, const BRepMesh_FastDiscret::Parameters& p);
 
+inline void replace(string& s, int pos, int count, char* buff) {
+	for (int i = 0; i < count; i++) {
+		s[pos + i] = buff[i];
+	}
+}
 class OutputXbj {
 public:
 	map<string, string> meta_data;
 	map<string, pair<string, int>> look_up;
-	int groups;
 	map<string, string> xbjs;
 	map<string, string> files;
 	OutputXbj(OpennurbsGroupInfo& info,
@@ -186,8 +190,8 @@ public:
 	}
 
 	void process_group() {
-		files["group_info"] = string();
-		auto& x = files["group_info"];
+		files["_group_info"] = string();
+		auto& x = files["_group_info"];
 		x += (to_string(_info.group_ids.size())+ " \n");
 		x += (to_string(_info.root_group_ids.size()) + " \n");
 		for (auto id : _info.root_group_ids) {
@@ -208,7 +212,7 @@ public:
 			x += "\n";
 		}
 		MD5 md5(x);
-		meta_data["group_info"] = md5.toStr();
+		meta_data["_group_info"] = md5.toStr();
 	}
 
 	void process_xbjs() {
@@ -216,30 +220,30 @@ public:
 		process(_obj_meshs, "object");
 		//groups and objects
 		for (auto &x : _grp_grp_meshs) {
-			process(x.second, "group_" + to_string(x.first) + "group");
+			process(x.second, "group_" + to_string(x.first) + "_group");
 		}
 		for (auto &x : _grp_obj_meshs) {
-			process(x.second, "group_" + to_string(x.first) + "object");
+			process(x.second, "group_" + to_string(x.first) + "_object");
 		}
 	}
 
 	void process_meta() {
-		files["metadata"] = "";
-		auto& x = files["metadata"];
+		files["_metadata"] = "";
+		auto& x = files["_metadata"];
 		for (auto & y : meta_data) {
 			x += y.first + " " + y.second + "\n";
 		}
 	}
 
 	void process_lookup() {
-		files["lookup"] = "";
-		auto& x = files["lookup"];
+		files["_lookup"] = "";
+		auto& x = files["_lookup"];
 		for (auto& y : look_up) {
 			x += y.first + " " + y.second.first + " " + to_string(y.second.second) + "\n";
 		}
 		MD5 md5(x);
 
-		meta_data["lookup"] = md5.toStr();
+		meta_data["_lookup"] = md5.toStr();
 	}
 
 	void output(const string& prefix) {
@@ -251,15 +255,22 @@ public:
 		}
 	}
 
+	void release_mem() {
+		meta_data.clear();
+		look_up.clear();
+		xbjs.clear();
+		files.clear();
+	}
+
 private:
 	OpennurbsGroupInfo& _info;
 	map<int, Mesh>& _obj_meshs;
 	map<int, map<int, Mesh>>& _grp_obj_meshs;
 	map<int, map<int, Mesh>>& _grp_grp_meshs;
 
-	void process(map<int, Mesh> meshes, string prefix) {
+	void process(map<int, Mesh>& meshes, string prefix) {
 		vector<pair<int, int>> base;
-		for (auto &x : _obj_meshs) {
+		for (auto &x : meshes) {
 			base.push_back(pair<int, int>(x.second.len_xbj, x.first));
 		}
 		sort(base.begin(), base.end());
@@ -275,19 +286,19 @@ private:
 			}
 			int file_size = now_size + 12;
 			int mesh_count = right - left;
-			cout << left << " " << right << endl;
-			cout << file_size << endl;
+			//cout << left << " " << right << endl;
+			//cout << file_size << endl;
 			string file_name = prefix + "_" + to_string(postfix) + ".xbj";
 			files[file_name] = string(file_size, ' ');
 			auto &file = files[file_name];
-			cout << file.size() << endl;
-			file.replace(0, 8, "XBJV0001");
-			file.replace(8, 4, (char*)&mesh_count);
+			//cout << file.size() << endl;
+			replace(file, 0, 8, "XBJV0001");
+			replace(file, 8, 4, (char*)&mesh_count);
 			int lookup_pos = 12;
 			for (int i = left; i < right; i++) {
-				cout << lookup_pos<<" " << base[i].first <<endl;
-				look_up[_obj_meshs[base[i].second].name] = pair<string, int>(file_name, lookup_pos);
-				file.replace(lookup_pos, base[i].first, _obj_meshs[base[i].second].xbj);
+				//cout << file.size() << " " << lookup_pos << " " << base[i].first << endl;
+				look_up[meshes[base[i].second].name] = pair<string, int>(file_name, lookup_pos);
+				replace(file, lookup_pos, base[i].first, meshes[base[i].second].xbj);
 				lookup_pos += base[i].first;
 			}
 			MD5 md5(file);

@@ -69,6 +69,17 @@ public:
 		}
 	}
 
+	void release_mem() {
+		object_ids.swap(vector<int>());
+		group_id_objects.swap(map<int, set<int>>());
+		object_id_groups.swap(map<int, set<int>>());
+		group_ids.swap(set<int>());
+		group_id_groups.swap(map<int, set<int>>());
+		root_group_ids.swap(set<int>());
+		group_composed_of_groups.swap(map<int, set<int>>());
+		group_composed_of_objects.swap(map<int, set<int>>());
+	}
+
 private:
 	void generate() {
 		//for (int group_id = 0; group_id < m_model->m_group_table.Count(); group_id++) {
