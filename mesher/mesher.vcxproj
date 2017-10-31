@@ -115,6 +115,7 @@
   <ItemGroup>
     <ClCompile Include="brep_conversion.cpp" />
     <ClCompile Include="bspline_conversion.cpp" />
+    <ClCompile Include="md5.cpp" />
     <ClCompile Include="obj_model_output.cpp" />
     <ClCompile Include="opennurbs_utils.cpp" />
     <ClCompile Include="opencascade_simplifier.cpp" />
@@ -123,6 +124,7 @@
     <ClInclude Include="brep_conversion.h" />
     <ClInclude Include="bspline_conversion.h" />
     <ClInclude Include="folder.h" />
+    <ClInclude Include="md5.h" />
     <ClInclude Include="obj_model_output.h" />
     <ClInclude Include="opennurbs_utils.h" />
     <ClInclude Include="xbj.h" />
