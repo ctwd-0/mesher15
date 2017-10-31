@@ -252,23 +252,33 @@ int main() {
 	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
 
 	start = clock();
+	int xbj_len = 0;
 	for (auto& obj_mesh : obj_meshs) {
-		if(obj_mesh.name.size()!= 0)
-			obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
+		if (obj_mesh.name.size() == 0) {
+			continue;
+		}
+		obj_mesh.generate_xbj(8);
+		xbj_len += obj_mesh.len_xbj;
+		//obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
 	}
 	for (auto & x : grp_grp_meshs) {
 		for (auto& y : x.second) {
 			auto& grp_mesh = y.second;
-			grp_mesh.write_obj((output_dir + grp_mesh.name + ".obj").c_str());
+			grp_mesh.generate_xbj();
+			xbj_len += grp_mesh.len_xbj;
+			//grp_mesh.write_obj((output_dir + grp_mesh.name + ".obj").c_str());
 		}
 	}
 	for (auto & x : grp_obj_meshs) {
 		for (auto& y : x.second) {
 			auto& obj_mesh = y.second;
-			obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
+			obj_mesh.generate_xbj();
+			xbj_len += obj_mesh.len_xbj;
+			//obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
 		}
 	}
 	end = clock();
+	cout << "xbj_len = " << xbj_len /(1024*1024.0) << "MB."<< endl;
 	cout << "output obj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();

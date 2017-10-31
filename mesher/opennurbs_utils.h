@@ -37,6 +37,7 @@ public:
 		:m_model(model){
 		generate();
 		compose();
+		cout << "root groups:" << endl;
 		for (auto group_id : root_group_ids) {
 			cout << group_id << " ";
 		}
