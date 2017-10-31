@@ -24,6 +24,8 @@
 #pragma comment(lib, "TKMesh.lib")
 
 #include "xbj.h"
+#include "opennurbs_utils.h"
+#include "md5.h"
 
 using namespace std;
 
@@ -162,3 +164,136 @@ private:
 };
 
 Mesh generate_occt_mesh(const TopoDS_Shape& shape, const BRepMesh_FastDiscret::Parameters& p);
+
+class OutputXbj {
+public:
+	map<string, string> meta_data;
+	map<string, pair<string, int>> look_up;
+	int groups;
+	map<string, string> xbjs;
+	map<string, string> files;
+	OutputXbj(OpennurbsGroupInfo& info,
+		map<int, Mesh>& obj_meshs,
+		map<int, map<int, Mesh>>& grp_obj_meshs,
+		map<int, map<int, Mesh>>& grp_grp_meshs):
+	_info(info),_obj_meshs(obj_meshs),
+		_grp_obj_meshs(grp_obj_meshs), _grp_grp_meshs(grp_grp_meshs){
+
+		process_xbjs();
+		process_group();
+		process_lookup();
+		process_meta();
+	}
+
+	void process_group() {
+		files["group_info"] = string();
+		auto& x = files["group_info"];
+		x += (to_string(_info.group_ids.size())+ " \n");
+		x += (to_string(_info.root_group_ids.size()) + " \n");
+		for (auto id : _info.root_group_ids) {
+			x += (to_string(id) + " ");
+		}
+		x += "\n";
+		for (auto group_id : _info.group_ids) {
+			x += (to_string(group_id) + " \n");
+			x += (to_string(_info.group_composed_of_groups[group_id].size()) + " \n");
+			for (auto sub_group_id : _info.group_composed_of_groups[group_id]) {
+				x += (to_string(sub_group_id) + " ");
+			}
+			x += "\n";
+			x += (to_string(_info.group_composed_of_objects[group_id].size()) + " \n");
+			for (auto object_id : _info.group_composed_of_objects[group_id]) {
+				x += (to_string(object_id) + " ");
+			}
+			x += "\n";
+		}
+		MD5 md5(x);
+		meta_data["group_info"] = md5.toStr();
+	}
+
+	void process_xbjs() {
+		//objects
+		process(_obj_meshs, "object");
+		//groups and objects
+		for (auto &x : _grp_grp_meshs) {
+			process(x.second, "group_" + to_string(x.first) + "group");
+		}
+		for (auto &x : _grp_obj_meshs) {
+			process(x.second, "group_" + to_string(x.first) + "object");
+		}
+	}
+
+	void process_meta() {
+		files["metadata"] = "";
+		auto& x = files["metadata"];
+		for (auto & y : meta_data) {
+			x += y.first + " " + y.second + "\n";
+		}
+	}
+
+	void process_lookup() {
+		files["lookup"] = "";
+		auto& x = files["lookup"];
+		for (auto& y : look_up) {
+			x += y.first + " " + y.second.first + " " + to_string(y.second.second) + "\n";
+		}
+		MD5 md5(x);
+
+		meta_data["lookup"] = md5.toStr();
+	}
+
+	void output(const string& prefix) {
+		for (auto& x : files) {
+			FILE* f;
+			fopen_s(&f, (prefix + "\\" + x.first).c_str(), "wb");
+			fwrite(x.second.c_str(), x.second.length(), 1, f);
+			fclose(f);
+		}
+	}
+
+private:
+	OpennurbsGroupInfo& _info;
+	map<int, Mesh>& _obj_meshs;
+	map<int, map<int, Mesh>>& _grp_obj_meshs;
+	map<int, map<int, Mesh>>& _grp_grp_meshs;
+
+	void process(map<int, Mesh> meshes, string prefix) {
+		vector<pair<int, int>> base;
+		for (auto &x : _obj_meshs) {
+			base.push_back(pair<int, int>(x.second.len_xbj, x.first));
+		}
+		sort(base.begin(), base.end());
+		reverse(base.begin(), base.end());
+		int postfix = 1;
+		int left = 0; int right = 0;
+		while (left < base.size()) {
+			right = left + 1;
+			int now_size = base[left].first;
+			while (right < base.size() && (now_size + base[right].first) < MAX_XBJ_SIZE) {
+				now_size += base[right].first;
+				right++;
+			}
+			int file_size = now_size + 12;
+			int mesh_count = right - left;
+			cout << left << " " << right << endl;
+			cout << file_size << endl;
+			string file_name = prefix + "_" + to_string(postfix) + ".xbj";
+			files[file_name] = string(file_size, ' ');
+			auto &file = files[file_name];
+			cout << file.size() << endl;
+			file.replace(0, 8, "XBJV0001");
+			file.replace(8, 4, (char*)&mesh_count);
+			int lookup_pos = 12;
+			for (int i = left; i < right; i++) {
+				cout << lookup_pos<<" " << base[i].first <<endl;
+				look_up[_obj_meshs[base[i].second].name] = pair<string, int>(file_name, lookup_pos);
+				file.replace(lookup_pos, base[i].first, _obj_meshs[base[i].second].xbj);
+				lookup_pos += base[i].first;
+			}
+			MD5 md5(file);
+			meta_data[file_name] = md5.toStr();
+			postfix++;
+			left = right;
+		}
+	}
+};

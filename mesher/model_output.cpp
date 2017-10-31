@@ -1,4 +1,4 @@
-#include "obj_model_output.h"
+#include "model_output.h"
 
 using namespace std;
 

@@ -13,7 +13,7 @@ using namespace std;
 
 #include "opennurbs_utils.h"
 
-#include "obj_model_output.h"
+#include "model_output.h"
 
 #include "bspline_conversion.h"
 
@@ -89,7 +89,7 @@ int main() {
 
 	string output_prefix = "D:\\garbage\\";
 
-	case_name = "full";
+	case_name = "small8";
 
 	mkdir((output_prefix + case_name).c_str());
 	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
@@ -171,7 +171,7 @@ int main() {
 
 	map<int, map<int, Mesh>> grp_obj_meshs;
 
-	map<int, map<int,Mesh>> grp_grp_meshs;
+	map<int, map<int, Mesh>> grp_grp_meshs;
 
 	map<int, BRepMesh_FastDiscret::Parameters> grp_paras;
 
@@ -253,20 +253,22 @@ int main() {
 
 	start = clock();
 	int xbj_len = 0;
-	for (auto& obj_mesh : obj_meshs) {
+	map<int, Mesh> map_obj_meshs;
+	for (int i = 0; i < obj_meshs.size(); i++) {
+		auto & obj_mesh = obj_meshs[i];
 		if (obj_mesh.name.size() == 0) {
 			continue;
 		}
-		obj_mesh.generate_xbj(8);
+		map_obj_meshs[i] = obj_mesh;
+		map_obj_meshs[i].generate_xbj(8);
 		xbj_len += obj_mesh.len_xbj;
-		//obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
 	}
+	obj_meshs.swap(vector<Mesh>());
 	for (auto & x : grp_grp_meshs) {
 		for (auto& y : x.second) {
 			auto& grp_mesh = y.second;
 			grp_mesh.generate_xbj();
 			xbj_len += grp_mesh.len_xbj;
-			//grp_mesh.write_obj((output_dir + grp_mesh.name + ".obj").c_str());
 		}
 	}
 	for (auto & x : grp_obj_meshs) {
@@ -274,16 +276,17 @@ int main() {
 			auto& obj_mesh = y.second;
 			obj_mesh.generate_xbj();
 			xbj_len += obj_mesh.len_xbj;
-			//obj_mesh.write_obj((output_dir + obj_mesh.name + ".obj").c_str());
 		}
 	}
+	OutputXbj output_xbj(group_info, map_obj_meshs, grp_obj_meshs, grp_grp_meshs);
+	output_xbj.output(output_dir);
 	end = clock();
 	cout << "xbj_len = " << xbj_len /(1024*1024.0) << "MB."<< endl;
 	cout << "output obj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
 	breps.swap(vector<TopoDS_Compound>());
-	obj_meshs.swap(vector<Mesh>());
+	map_obj_meshs.swap(map<int, Mesh>());
 	grp_obj_meshs.swap(map<int, map<int, Mesh>>());
 	grp_grp_meshs.swap(map<int, map<int, Mesh>>());
 	grp_paras.swap(map<int, BRepMesh_FastDiscret::Parameters>());

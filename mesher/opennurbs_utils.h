@@ -17,7 +17,7 @@ bool IsLayerVisible(const ON_ObjectArray<ON_Layer>& layer_table, int layer_index
 
 bool IsModelObjectVisible(const ONX_Model& model, const ONX_Model_Object& model_object);
 
-static inline bool contains(set<int> &big, set<int> &small) {
+inline bool contains(set<int> &big, set<int> &small) {
 	if (small.size() > big.size()) {
 		return false;
 	}
@@ -27,7 +27,7 @@ static inline bool contains(set<int> &big, set<int> &small) {
 			return false;
 		}
 	}
-
+		
 	return true;
 }
 
@@ -105,6 +105,36 @@ private:
 
 		//cout << "object_ids.size() = "<< object_ids .size()<<endl;
 
+		//ÒÆ³ýÖØ¸´µÄgroup
+		vector<int> groups;
+		set<int> removed;
+		for (auto group_id : group_ids) {
+			groups.push_back(group_id);
+		}
+
+		for (int i = 0; i < groups.size(); i++) {
+			if (removed.count(i) != 0) {
+				continue;
+			}
+			for (int j = i + 1; j < groups.size(); j++) {
+				if (removed.count(j) != 0) {
+					continue;
+				}
+ 				if (group_id_objects[i].size() == group_id_objects[j].size()
+					&& contains(group_id_objects[i], group_id_objects[j])) {
+					removed.insert(j);
+				}
+			}
+		}
+
+		for (auto group_id : removed) {
+			group_ids.erase(group_id);
+			for (auto object_id : group_id_objects[group_id]) {
+				object_id_groups[object_id].erase(object_id);
+			}
+			group_id_objects.erase(group_id);
+		}
+
 		for (auto&x : group_id_objects) {
 			if (x.second.size() > max_group_size) {
 				max_group_size = x.second.size();
@@ -138,9 +168,9 @@ private:
 
 	void compose() {
 		for (auto group_id : group_ids) {
+			group_composed_of_groups[group_id] = set<int>();
+			group_composed_of_objects[group_id] = set<int>();
 			if (group_id_groups.count(group_id) != 0) {
-				group_composed_of_groups[group_id] = set<int>();
-				group_composed_of_objects[group_id] = set<int>();
 				auto candidates = group_id_groups[group_id];
 				auto obj_ids = group_id_objects[group_id];
 				while (candidates.size() != 0 && obj_ids.size() != 0) {
