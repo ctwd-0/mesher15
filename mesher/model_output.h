@@ -217,13 +217,13 @@ public:
 
 	void process_xbjs() {
 		//objects
-		process(_obj_meshs, "object");
+		process(_obj_meshs, "o");
 		//groups and objects
 		for (auto &x : _grp_grp_meshs) {
-			process(x.second, "group_" + to_string(x.first) + "_group");
+			process(x.second, "g_" + to_string(x.first) + "_g");
 		}
 		for (auto &x : _grp_obj_meshs) {
-			process(x.second, "group_" + to_string(x.first) + "_object");
+			process(x.second, "g_" + to_string(x.first) + "_o");
 		}
 	}
 

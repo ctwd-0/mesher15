@@ -56,7 +56,6 @@ int process_nurbs(nurbs_conversion_data* data) {
 		}
 
 		ONX_Model_Object &object = data->model->m_object_table[obj_id];
-
 		const ON_Brep* brep = ON_Brep::Cast(object.m_object);
 
 		if (brep == nullptr) {
@@ -67,7 +66,7 @@ int process_nurbs(nurbs_conversion_data* data) {
 		int mc = brep->GetMesh(ON::render_mesh, meshes);
 
 		if (mc) {
-			(*(data->obj_mesh))[obj_id].name = "object_" + to_string(obj_id);
+			(*(data->obj_mesh))[obj_id].name = "o_" + to_string(obj_id);
 			for (int i = 0; i < meshes.Count(); i++) {
 				auto mesh = meshes[i];
 				(*(data->obj_mesh))[obj_id].append_mesh(mesh);
@@ -135,6 +134,10 @@ int main() {
 	data.obj_mesh = &obj_meshs;
 	data.breps = &breps;
 	
+	for (int i = 0; i < model->m_group_table.Count(); i++) {
+		auto group = model->m_group_table[i];
+	}
+
 	start = clock();
 
 	for (int i = 0; i < thread_count; i++) {
@@ -210,7 +213,7 @@ int main() {
 		for (auto grp_id : group_info.object_id_groups[obj_id]) {
 			if (grp_paras.count(grp_id) != 0) {
 				grp_obj_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_paras[grp_id]);
-				grp_obj_meshs[grp_id][obj_id].name = "group_" + to_string(grp_id) + "_object_" + to_string(obj_id);
+				grp_obj_meshs[grp_id][obj_id].name = "g_" + to_string(grp_id) + "_o_" + to_string(obj_id);
 			}
 		}
 	}
@@ -230,7 +233,7 @@ int main() {
 		grp_grp_meshs[grp_id] = map<int,Mesh>();
 		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
 			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
-			grp_grp_meshs[grp_id][sub_grp_id].name = "group_" + to_string(grp_id) + "_group_" + to_string(sub_grp_id);
+			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
 			if (grp_obj_meshs.count(grp_id)) {
 				//use opencascade mesh
 				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
