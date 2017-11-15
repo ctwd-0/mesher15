@@ -263,7 +263,7 @@ int main() {
 			continue;
 		}
 		map_obj_meshs[i] = obj_mesh;
-		map_obj_meshs[i].generate_xbj(8);
+		map_obj_meshs[i].generate_xbj();
 		xbj_len += map_obj_meshs[i].len_xbj;
 	}
 
