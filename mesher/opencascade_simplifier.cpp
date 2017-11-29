@@ -38,6 +38,8 @@ public:
 	vector<TopoDS_Compound>* breps;
 };
 
+//set<int> skips = {26300,26301,26302,26313,26313,26314,26315,26316,26317,};
+
 int process_nurbs(nurbs_conversion_data* data) {
 	int obj_id;
 
@@ -88,7 +90,7 @@ int main() {
 
 	string output_prefix = "D:\\garbage\\";
 
-	case_name = "full";
+	case_name = "20171123";
 
 	mkdir((output_prefix + case_name).c_str());
 	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
@@ -285,7 +287,7 @@ int main() {
 	output_xbj.output(output_dir);
 	end = clock();
 	cout << "xbj_len = " << xbj_len /(1024*1024.0) << "MB."<< endl;
-	cout << "output obj finished. " << (end - start) / 1000.0 << "s used." << endl;
+	cout << "output xbj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
 	group_info.release_mem();

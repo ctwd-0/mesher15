@@ -16,4 +16,4 @@ int32 * 3 * NF, 索引从1开始
 )*NM
 */
 
-#define MAX_XBJ_SIZE (0x800000 - 12)
+#define MAX_XBJ_SIZE (0x100000 - 12)

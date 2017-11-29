@@ -63,7 +63,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\inc;C:\dev\boost_1_59_0;C:\dev\CGAL-4.9\include;E:\20170109\mesher15\mesher\openmesh\include;E:\20170109\mesher\mesher\opennurbs\include;$(IncludePath)</IncludePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
-    <LibraryPath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\win64\vc14\lib;C:\dev\CGAL-4.9\build\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\OpenCASCADE7.1.0-vc10-64\opencascade-7.1.0\win64\vc14\libd;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ReferencePath>$(ReferencePath)</ReferencePath>

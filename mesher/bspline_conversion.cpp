@@ -85,16 +85,15 @@ Handle_Geom_BSplineCurve convert_opennurbs_curve_to_occt_curve(const ON_NurbsCur
 }
 
 Handle_Geom_BSplineSurface convert_opennurbs_surface_to_occt_surface(const ON_NurbsSurface* surface) {
+	bool is_u_periodic = (bool)surface->IsPeriodic(0);
+	bool is_v_periodic = (bool)surface->IsPeriodic(1);
+
 	TColgp_Array2OfPnt poles(1, surface->CVCount(0), 1, surface->CVCount(1));
 	TColStd_Array2OfReal weights(1, surface->CVCount(0), 1, surface->CVCount(1));
 
 	TColStd_Array1OfReal u_knot_sequence(1, surface->KnotCount(0) + 2);
 	TColStd_Array1OfReal v_knot_sequence(1, surface->KnotCount(1) + 2);
 
-	bool is_u_periodic = (bool)surface->IsPeriodic(0);
-	bool is_v_periodic = (bool)surface->IsPeriodic(1);
-
-	// control point and its weight.
 	for (int i = 0; i < surface->CVCount(0); ++i) {
 		for (int j = 0; j < surface->CVCount(1); ++j) {
 			if (surface->IsRational()) {
@@ -112,29 +111,28 @@ Handle_Geom_BSplineSurface convert_opennurbs_surface_to_occt_surface(const ON_Nu
 		}
 	}
 
-	// Knot vector and its multiplicity.
 	for (int i = 0; i < surface->KnotCount(0); ++i) {
 		u_knot_sequence.SetValue(i + 2, surface->Knot(0, i));
 	}
 	u_knot_sequence.SetValue(u_knot_sequence.Lower(), surface->Knot(0, 0));
 	u_knot_sequence.SetValue(u_knot_sequence.Upper(), surface->Knot(0, surface->KnotCount(0) - 1));
-	TColStd_Array1OfReal u_knots(1, BSplCLib::KnotsLength(u_knot_sequence, is_u_periodic));
-	TColStd_Array1OfInteger u_mults(1, u_knots.Upper());
-	BSplCLib::Knots(u_knot_sequence, u_knots, u_mults);
-
 	for (int j = 0; j < surface->KnotCount(1); ++j) {
 		v_knot_sequence.SetValue(j + 2, surface->Knot(1, j));
 	}
 	v_knot_sequence.SetValue(v_knot_sequence.Lower(), surface->Knot(1, 0));
 	v_knot_sequence.SetValue(v_knot_sequence.Upper(), surface->Knot(1, surface->KnotCount(1) - 1));
+
+	TColStd_Array1OfReal u_knots(1, BSplCLib::KnotsLength(u_knot_sequence, is_u_periodic));
+	TColStd_Array1OfInteger u_mults(1, u_knots.Upper());
 	TColStd_Array1OfReal v_knots(1, BSplCLib::KnotsLength(v_knot_sequence, is_v_periodic));
 	TColStd_Array1OfInteger v_mults(1, v_knots.Upper());
+
+	BSplCLib::Knots(u_knot_sequence, u_knots, u_mults);
 	BSplCLib::Knots(v_knot_sequence, v_knots, v_mults);
 
 	Handle_Geom_BSplineSurface occt_surface = new Geom_BSplineSurface(poles,
 		weights, u_knots, v_knots, u_mults, v_mults,
 		surface->Degree(0), surface->Degree(1),
 		is_u_periodic, is_v_periodic);
-
 	return occt_surface;
 }
