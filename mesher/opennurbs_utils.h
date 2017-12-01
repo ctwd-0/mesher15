@@ -9,6 +9,9 @@
 #include <set>
 #include <vector>
 #include <iostream>
+#include <string>
+#include <locale>
+#include <codecvt>
 
 using namespace std;
 
@@ -31,6 +34,17 @@ inline bool contains(set<int> &big, set<int> &small) {
 	return true;
 }
 
+inline string wstring_to_string(ON_wString& input) {
+	wstring temp;
+	for (int i = 0; i < input.Length(); i++) {
+		temp.push_back(input[i]);
+	}
+
+	wstring_convert<std::codecvt_utf8<wchar_t>> c;
+
+	return c.to_bytes(temp);
+}
+
 class OpennurbsGroupInfo {
 public:
 	OpennurbsGroupInfo(ONX_Model* model) 
@@ -51,6 +65,10 @@ public:
 	set<int> root_group_ids;
 	map<int, set<int>> group_composed_of_groups;
 	map<int, set<int>> group_composed_of_objects;
+
+	map<int, string> map_group_id_name;
+	map<int, string> map_object_id_name;
+	map<int, string> map_object_id_uuid;
 
 	void output() {
 		for (auto & x: group_ids) {
@@ -99,7 +117,11 @@ private:
 
 			object_ids.push_back(object_id);
 			object_id_groups[object_id] = set<int>();
-
+			auto name = wstring_to_string(object.m_attributes.m_name);
+			char uuid[37];
+			ON_UuidToString(object.m_attributes.m_uuid, uuid);
+			map_object_id_name[object_id] = name;
+			map_object_id_uuid[object_id] = uuid;
 			auto group_count = object.m_attributes.GroupCount();
 			auto group_list = object.m_attributes.GroupList();
 

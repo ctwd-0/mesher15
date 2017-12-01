@@ -65,9 +65,11 @@ public:
 	void merge_vertices() {
 		::merge_vertices(v, f);
 	}
+
 	bool empty() {
 		return (v.size() == 0) || (f.size() == 0);
 	}
+
 	void generate_xbj(int byte_float = 4) {
 		if (name.length() == 0 || v.size() == 0 || f.size() == 0) {
 			return;
@@ -170,6 +172,7 @@ inline void replace(string& s, int pos, int count, char* buff) {
 		s[pos + i] = buff[i];
 	}
 }
+
 class OutputXbj {
 public:
 	map<string, string> meta_data;
@@ -186,6 +189,7 @@ public:
 		process_xbjs();
 		process_group();
 		process_lookup();
+		process_names();
 		process_meta();
 	}
 
@@ -245,6 +249,16 @@ public:
 
 		meta_data["_lookup"] = md5.toStr();
 	}
+	
+	void process_names() {
+		files["_names"] = "";
+		auto& x = files["_names"];
+		for (auto & y : _info.map_object_id_name) {
+			x += to_string(y.first) + " " +_info.map_object_id_uuid[y.first] + " " + y.second + "\n";
+		}
+		MD5 md5(x);
+		meta_data["_names"] = md5.toStr();
+	}
 
 	void output(const string& prefix) {
 		for (auto& x : files) {
@@ -273,8 +287,8 @@ private:
 		for (auto &x : meshes) {
 			base.push_back(pair<int, int>(x.second.len_xbj, x.first));
 		}
-		sort(base.begin(), base.end());
-		reverse(base.begin(), base.end());
+		//sort(base.begin(), base.end());
+		//reverse(base.begin(), base.end());
 		int postfix = 1;
 		int left = 0; int right = 0;
 		while (left < base.size()) {
