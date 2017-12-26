@@ -222,39 +222,39 @@ int main() {
 	end = clock();
 	cout << "generate mesh finished. " << (end - start) / 1000.0 << "s used." << endl;
 	
-	start = clock();
-	vector<int> grp_ids;
-	for (auto grp_id : group_info.group_ids) {
-		grp_grp_meshs[grp_id] = map<int,Mesh>();
-		grp_ids.push_back(grp_id);
-	}
-
-#pragma omp parallel for
-	for (auto i = 0; i < grp_ids.size(); i++) {
-		auto grp_id = grp_ids[i];
-		grp_grp_meshs[grp_id] = map<int,Mesh>();
-		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
-			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
-			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
-			if (grp_obj_meshs.count(grp_id)) {
-				//use opencascade mesh
-				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(grp_obj_meshs[grp_id][obj_id]);
-					grp_obj_meshs[grp_id].erase(obj_id);
-				}
-			}
-			else {
-				//use opennurbs mesh
-				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(obj_meshs[obj_id]);
-				}
-			}
-			grp_grp_meshs[grp_id][sub_grp_id].merge_vertices();
-		}
-	}
-
-	end = clock();
-	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
+//	start = clock();
+//	vector<int> grp_ids;
+//	for (auto grp_id : group_info.group_ids) {
+//		grp_grp_meshs[grp_id] = map<int,Mesh>();
+//		grp_ids.push_back(grp_id);
+//	}
+//
+//#pragma omp parallel for
+//	for (auto i = 0; i < grp_ids.size(); i++) {
+//		auto grp_id = grp_ids[i];
+//		grp_grp_meshs[grp_id] = map<int,Mesh>();
+//		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
+//			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
+//			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
+//			if (grp_obj_meshs.count(grp_id)) {
+//				//use opencascade mesh
+//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
+//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(grp_obj_meshs[grp_id][obj_id]);
+//					grp_obj_meshs[grp_id].erase(obj_id);
+//				}
+//			}
+//			else {
+//				//use opennurbs mesh
+//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
+//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(obj_meshs[obj_id]);
+//				}
+//			}
+//			grp_grp_meshs[grp_id][sub_grp_id].merge_vertices();
+//		}
+//	}
+//
+//	end = clock();
+//	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
 
 	start = clock();
 	int xbj_len = 0;
@@ -291,7 +291,7 @@ int main() {
 
 	start = clock();
 	group_info.release_mem();
-	grp_ids.swap(vector<int>());
+	//grp_ids.swap(vector<int>());
 	output_xbj.release_mem();
 	obj_meshs.swap(vector<Mesh>());
 	breps.swap(vector<TopoDS_Compound>());
