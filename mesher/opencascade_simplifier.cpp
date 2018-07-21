@@ -90,7 +90,7 @@ int main() {
 
 	string output_prefix = "D:\\garbage\\";
 
-	case_name = "20171123";
+	case_name = "20180721";
 
 	mkdir((output_prefix + case_name).c_str());
 	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
@@ -107,7 +107,7 @@ int main() {
 	FILE* archive_fp = ON::OpenFile((case_name + ".3dm").c_str(), "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
 	bool rc = model->Read(archive);
-	
+
 	if (rc) {
 		//cout << "read 3dm file successed." << endl;
 	}
@@ -125,7 +125,7 @@ int main() {
 
 	OpennurbsGroupInfo group_info(model);
 
-	cout <<"number of groups: "<< group_info.group_ids.size() << endl;
+	cout << "number of groups: " << group_info.group_ids.size() << endl;
 
 	vector<TopoDS_Compound> breps(model->m_object_table.Count());
 
@@ -135,7 +135,7 @@ int main() {
 	data.model = model;
 	data.obj_mesh = &obj_meshs;
 	data.breps = &breps;
-	
+
 	for (int i = 0; i < model->m_group_table.Count(); i++) {
 		auto group = model->m_group_table[i];
 	}
@@ -164,14 +164,14 @@ int main() {
 	cout << "convert opennurbs to opencascad finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
-	
+
 	model->Destroy();
 	model->DestroyCache();
 	delete model;
-	
+
 	end = clock();
 	cout << "delete opennurbs model finished. " << (end - start) / 1000.0 << "s used." << endl;
-	
+
 	ON::End();
 
 	map<int, map<int, Mesh>> grp_obj_meshs;
@@ -196,7 +196,10 @@ int main() {
 		}
 		else {
 			BRepMesh_FastDiscret::Parameters p;
-			auto multiplier =  ceil((double)fs / MAX_F);
+			auto multiplier = ceil((double)fs / MAX_F);
+			if (multiplier < 1.0) {
+				multiplier = 1.0;
+			}
 			p.Deflection = 2.0 * multiplier;
 			p.Angle = 1.0 * multiplier;
 
@@ -208,53 +211,65 @@ int main() {
 		}
 	}
 
-#pragma omp parallel for
 	for (auto i = 0; i < group_info.object_ids.size(); i++) {
 		auto obj_id = group_info.object_ids[i];
-		//cout << obj_id << endl;
-		for (auto grp_id : group_info.object_id_groups[obj_id]) {
-			if (grp_paras.count(grp_id) != 0) {
-				grp_obj_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_paras[grp_id]);
-				grp_obj_meshs[grp_id][obj_id].name = "g_" + to_string(grp_id) + "_o_" + to_string(obj_id);
+		cout << obj_id;
+		clock_t s = clock();
+		if (obj_id == 8290) {
+			for (auto grp_id : group_info.object_id_groups[obj_id]) {
+				if (grp_paras.count(grp_id) != 0) {
+					grp_obj_meshs[grp_id][obj_id] = (*data.obj_mesh)[obj_id];
+					grp_obj_meshs[grp_id][obj_id].name = "g_" + to_string(grp_id) + "_o_" + to_string(obj_id);
+				}
 			}
 		}
+		else {
+			for (auto grp_id : group_info.object_id_groups[obj_id]) {
+				if (grp_paras.count(grp_id) != 0) {
+					grp_obj_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_paras[grp_id]);
+					grp_obj_meshs[grp_id][obj_id].name = "g_" + to_string(grp_id) + "_o_" + to_string(obj_id);
+				}
+			}
+		}
+		clock_t e = clock();
+		cout << ": " << (e - s) << "ms used." << endl;
 	}
 	end = clock();
 	cout << "generate mesh finished. " << (end - start) / 1000.0 << "s used." << endl;
-	
-//	start = clock();
-//	vector<int> grp_ids;
-//	for (auto grp_id : group_info.group_ids) {
-//		grp_grp_meshs[grp_id] = map<int,Mesh>();
-//		grp_ids.push_back(grp_id);
-//	}
-//
-//#pragma omp parallel for
-//	for (auto i = 0; i < grp_ids.size(); i++) {
-//		auto grp_id = grp_ids[i];
-//		grp_grp_meshs[grp_id] = map<int,Mesh>();
-//		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
-//			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
-//			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
-//			if (grp_obj_meshs.count(grp_id)) {
-//				//use opencascade mesh
-//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(grp_obj_meshs[grp_id][obj_id]);
-//					grp_obj_meshs[grp_id].erase(obj_id);
-//				}
-//			}
-//			else {
-//				//use opennurbs mesh
-//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(obj_meshs[obj_id]);
-//				}
-//			}
-//			grp_grp_meshs[grp_id][sub_grp_id].merge_vertices();
-//		}
-//	}
-//
-//	end = clock();
-//	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
+
+	//	start = clock();
+	//	vector<int> grp_ids;
+	//	for (auto grp_id : group_info.group_ids) {
+	//		grp_grp_meshs[grp_id] = map<int,Mesh>();
+	//		grp_ids.push_back(grp_id);
+	//	}
+	//
+	//#pragma omp parallel for
+	//	for (auto i = 0; i < grp_ids.size(); i++) {
+	//		auto grp_id = grp_ids[i];
+	//		grp_grp_meshs[grp_id] = map<int,Mesh>();
+	//		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
+	//			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
+	//			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
+	//			if (grp_obj_meshs.count(grp_id)) {
+	//				//use opencascade mesh
+	//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
+	//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(grp_obj_meshs[grp_id][obj_id]);
+	//					grp_obj_meshs[grp_id].erase(obj_id);
+	//				}
+	//			}
+	//			else {
+	//				//use opennurbs mesh
+	//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
+	//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(obj_meshs[obj_id]);
+	//				}
+	//			}
+	//			grp_grp_meshs[grp_id][sub_grp_id].merge_vertices();
+	//		}
+	//	}
+	//
+	//	end = clock();
+	//	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
 
 	start = clock();
 	int xbj_len = 0;
@@ -286,7 +301,7 @@ int main() {
 	OutputXbj output_xbj(group_info, map_obj_meshs, grp_obj_meshs, grp_grp_meshs);
 	output_xbj.output(output_dir);
 	end = clock();
-	cout << "xbj_len = " << xbj_len /(1024*1024.0) << "MB."<< endl;
+	cout << "xbj_len = " << xbj_len / (1024 * 1024.0) << "MB." << endl;
 	cout << "output xbj finished. " << (end - start) / 1000.0 << "s used." << endl;
 
 	start = clock();
