@@ -211,10 +211,10 @@ int main() {
 		}
 	}
 
+#pragma omp parallel for
 	for (auto i = 0; i < group_info.object_ids.size(); i++) {
 		auto obj_id = group_info.object_ids[i];
 		cout << obj_id;
-		clock_t s = clock();
 		if (obj_id == 8290) {
 			for (auto grp_id : group_info.object_id_groups[obj_id]) {
 				if (grp_paras.count(grp_id) != 0) {
@@ -226,50 +226,18 @@ int main() {
 		else {
 			for (auto grp_id : group_info.object_id_groups[obj_id]) {
 				if (grp_paras.count(grp_id) != 0) {
-					grp_obj_meshs[grp_id][obj_id] = generate_occt_mesh(breps[obj_id], grp_paras[grp_id]);
+					auto m = generate_occt_mesh(breps[obj_id], grp_paras[grp_id]);
+					if (m.f.size() > (*data.obj_mesh)[obj_id].f.size()) {
+						m = (*data.obj_mesh)[obj_id];
+					}
+					grp_obj_meshs[grp_id][obj_id] = m;
 					grp_obj_meshs[grp_id][obj_id].name = "g_" + to_string(grp_id) + "_o_" + to_string(obj_id);
 				}
 			}
 		}
-		clock_t e = clock();
-		cout << ": " << (e - s) << "ms used." << endl;
 	}
 	end = clock();
 	cout << "generate mesh finished. " << (end - start) / 1000.0 << "s used." << endl;
-
-	//	start = clock();
-	//	vector<int> grp_ids;
-	//	for (auto grp_id : group_info.group_ids) {
-	//		grp_grp_meshs[grp_id] = map<int,Mesh>();
-	//		grp_ids.push_back(grp_id);
-	//	}
-	//
-	//#pragma omp parallel for
-	//	for (auto i = 0; i < grp_ids.size(); i++) {
-	//		auto grp_id = grp_ids[i];
-	//		grp_grp_meshs[grp_id] = map<int,Mesh>();
-	//		for (auto sub_grp_id : group_info.group_composed_of_groups[grp_id]) {
-	//			grp_grp_meshs[grp_id][sub_grp_id] = Mesh();
-	//			grp_grp_meshs[grp_id][sub_grp_id].name = "g_" + to_string(grp_id) + "_g_" + to_string(sub_grp_id);
-	//			if (grp_obj_meshs.count(grp_id)) {
-	//				//use opencascade mesh
-	//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-	//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(grp_obj_meshs[grp_id][obj_id]);
-	//					grp_obj_meshs[grp_id].erase(obj_id);
-	//				}
-	//			}
-	//			else {
-	//				//use opennurbs mesh
-	//				for (auto obj_id : group_info.group_id_objects[sub_grp_id]) {
-	//					grp_grp_meshs[grp_id][sub_grp_id].append_mesh(obj_meshs[obj_id]);
-	//				}
-	//			}
-	//			grp_grp_meshs[grp_id][sub_grp_id].merge_vertices();
-	//		}
-	//	}
-	//
-	//	end = clock();
-	//	cout << "combine mesh finished. " << (end - start)/1000.0 << "s used." << endl;
 
 	start = clock();
 	int xbj_len = 0;
