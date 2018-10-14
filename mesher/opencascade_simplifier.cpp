@@ -38,7 +38,6 @@ public:
 	vector<TopoDS_Compound>* breps;
 };
 
-//set<int> skips = {26300,26301,26302,26313,26313,26314,26315,26316,26317,};
 
 int process_nurbs(nurbs_conversion_data* data) {
 	int obj_id;
@@ -60,7 +59,7 @@ int process_nurbs(nurbs_conversion_data* data) {
 		ONX_Model_Object &object = data->model->m_object_table[obj_id];
 		const ON_Brep* brep = ON_Brep::Cast(object.m_object);
 
-		if (brep == nullptr) {
+		if (nullptr == brep) {
 			continue;
 		}
 
@@ -90,7 +89,7 @@ int main() {
 
 	string output_prefix = "D:\\garbage\\";
 
-	case_name = "20180721";
+	case_name = "201808121851";
 
 	mkdir((output_prefix + case_name).c_str());
 	//mkdir((output_prefix + case_name + "_opennurbs").c_str());
@@ -106,7 +105,9 @@ int main() {
 	ONX_Model *model = new ONX_Model();;
 	FILE* archive_fp = ON::OpenFile((case_name + ".3dm").c_str(), "rb");
 	ON_BinaryFile archive(ON::read3dm, archive_fp);
-	bool rc = model->Read(archive);
+	FILE* log_fp = ON::OpenFile("201808121851.txt", "wb");
+	ON_TextLog llog(log_fp);
+	bool rc = model->Read(archive, &llog);
 
 	if (rc) {
 		//cout << "read 3dm file successed." << endl;
@@ -215,6 +216,7 @@ int main() {
 	for (auto i = 0; i < group_info.object_ids.size(); i++) {
 		auto obj_id = group_info.object_ids[i];
 		cout << obj_id;
+		auto s = clock();
 		if (obj_id == 8290) {
 			for (auto grp_id : group_info.object_id_groups[obj_id]) {
 				if (grp_paras.count(grp_id) != 0) {
@@ -235,6 +237,8 @@ int main() {
 				}
 			}
 		}
+		auto e = clock();
+		// cout << " :" << (e - s) << "ms used." << endl;
 	}
 	end = clock();
 	cout << "generate mesh finished. " << (end - start) / 1000.0 << "s used." << endl;
